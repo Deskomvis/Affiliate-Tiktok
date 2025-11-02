@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Affiliator, Sample, Broadcast, Reminder, Treatment } from './types';
 import { NAV_ITEMS, INITIAL_AFFILIATORS, INITIAL_SAMPLES, INITIAL_REMINDERS } from './constants';
 import { processCommand } from './services/geminiService';
-import { SendIcon, LoaderIcon } from './components/Icons';
+import { SendIcon, LoaderIcon, PlusIcon, TrashIcon, XIcon } from './components/Icons';
 
 // Custom hook for localStorage persistence
 const usePersistentState = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -28,17 +27,112 @@ const usePersistentState = <T,>(key: string, initialValue: T): [T, React.Dispatc
   return [state, setState];
 };
 
+const calculateTier = (followers: number): Affiliator['tier'] => {
+    if (followers > 1000000) return 'Mega';
+    if (followers > 100000) return 'Macro';
+    if (followers > 10000) return 'Mid';
+    if (followers > 1000) return 'Micro';
+    return 'New';
+};
+
+const getCurrentDate = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const AddAffiliateModal = ({ onClose, onAdd }: { onClose: () => void; onAdd: (affiliator: Omit<Affiliator, 'id'>) => void; }) => {
+    const [name, setName] = useState('');
+    const [tiktok, setTiktok] = useState('');
+    const [followers, setFollowers] = useState(0);
+    const [niche, setNiche] = useState('');
+    const [whatsapp, setWhatsapp] = useState('');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name || !tiktok || followers <= 0 || !niche || !whatsapp) {
+            alert('Please fill all fields');
+            return;
+        }
+
+        const newAffiliator: Omit<Affiliator, 'id'> = {
+            name,
+            tiktok_account: tiktok.startsWith('@') ? tiktok : `@${tiktok}`,
+            followers,
+            niche,
+            whatsapp,
+            tier: calculateTier(followers),
+            last_activity: getCurrentDate(),
+        };
+
+        onAdd(newAffiliator);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
+            <div className="bg-base-200 rounded-2xl shadow-xl w-full max-w-md border border-base-300 animate-fade-in-up">
+                <div className="p-6 flex justify-between items-center border-b border-base-300">
+                    <h2 className="text-xl font-bold text-primary-content">Add New Affiliate</h2>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-base-300 text-slate-400" aria-label="Close modal">
+                        <XIcon />
+                    </button>
+                </div>
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div>
+                        <label htmlFor="name" className="block text-sm font-medium text-slate-400 mb-1">Name</label>
+                        <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
+                    </div>
+                    <div>
+                        <label htmlFor="tiktok" className="block text-sm font-medium text-slate-400 mb-1">TikTok Account</label>
+                        <input id="tiktok" type="text" value={tiktok} onChange={e => setTiktok(e.target.value)} placeholder="@username" required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
+                    </div>
+                    <div>
+                        <label htmlFor="followers" className="block text-sm font-medium text-slate-400 mb-1">Followers</label>
+                        <input id="followers" type="number" value={followers || ''} onChange={e => setFollowers(Number(e.target.value))} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
+                    </div>
+                     <div>
+                        <label htmlFor="niche" className="block text-sm font-medium text-slate-400 mb-1">Niche</label>
+                        <input id="niche" type="text" value={niche} onChange={e => setNiche(e.target.value)} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
+                    </div>
+                    <div>
+                        <label htmlFor="whatsapp" className="block text-sm font-medium text-slate-400 mb-1">WhatsApp</label>
+                        <input id="whatsapp" type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="+62..." required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
+                    </div>
+                    <div className="pt-4 flex justify-end gap-3">
+                        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-base-300 hover:bg-base-300/80 text-primary-content font-semibold">Cancel</button>
+                        <button type="submit" className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-focus text-primary-content font-semibold">Save Affiliate</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 const App: React.FC = () => {
   const [view, setView] = useState<View>(View.Dashboard);
   const [command, setCommand] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const [affiliators, setAffiliators] = usePersistentState<Affiliator[]>('affiliators', INITIAL_AFFILIATORS);
   const [samples, setSamples] = usePersistentState<Sample[]>('samples', INITIAL_SAMPLES);
   const [broadcasts, setBroadcasts] = usePersistentState<Broadcast[]>('broadcasts', []);
   const [reminders, setReminders] = usePersistentState<Reminder[]>('reminders', INITIAL_REMINDERS);
   const [treatments, setTreatments] = usePersistentState<Treatment[]>('treatments', []);
+
+  const handleAddAffiliate = (newAffiliate: Omit<Affiliator, 'id'>) => {
+      setAffiliators(prev => [...prev, { ...newAffiliate, id: crypto.randomUUID() }]);
+      setIsAddModalOpen(false);
+  };
+  
+  const handleDeleteAffiliate = (id: string, name: string) => {
+      if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+          setAffiliators(prev => prev.filter(a => a.id !== id));
+      }
+  };
 
   const handleCommandSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +150,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // Process valid actions
     switch (response.action) {
       case 'add_affiliator':
         setAffiliators(prev => [...prev, ...response.data.map((a: Omit<Affiliator, 'id'>) => ({ ...a, id: crypto.randomUUID() }))]);
@@ -67,7 +160,6 @@ const App: React.FC = () => {
         setView(View.Broadcast);
         break;
       case 'manage_sample':
-        // This can either add a new sample or update an existing one. For simplicity, we'll just add.
         setSamples(prev => [...prev, ...response.data.map((s: Omit<Sample, 'id'>) => ({ ...s, id: crypto.randomUUID() }))]);
         setView(View.Samples);
         break;
@@ -79,6 +171,17 @@ const App: React.FC = () => {
         setReminders(prev => [...prev, { ...response.data, id: crypto.randomUUID() }]);
         setView(View.Reminders);
         break;
+      case 'delete_affiliator': {
+            const nameToDelete = response.data.name;
+            const affiliateToDelete = affiliators.find(a => a.name.toLowerCase() === nameToDelete.toLowerCase());
+            if (affiliateToDelete) {
+               handleDeleteAffiliate(affiliateToDelete.id, affiliateToDelete.name);
+            } else {
+                setError(`Affiliate "${nameToDelete}" not found.`);
+            }
+            setView(View.Affiliates);
+            break;
+        }
       default:
         setError('Received an unknown action from the AI.');
     }
@@ -161,7 +264,6 @@ const App: React.FC = () => {
     );
 };
 
-
   const renderView = () => {
     switch (view) {
       case View.Dashboard:
@@ -169,7 +271,13 @@ const App: React.FC = () => {
       case View.Affiliates:
         return (
             <div className="space-y-6">
-                <h1 className="text-3xl font-bold text-primary-content">Affiliates</h1>
+                <div className="flex justify-between items-center">
+                  <h1 className="text-3xl font-bold text-primary-content">Affiliates</h1>
+                  <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary-focus text-primary-content font-semibold transition-colors">
+                      <PlusIcon />
+                      <span>Add Affiliate</span>
+                  </button>
+                </div>
                  <div className="overflow-x-auto bg-base-200 rounded-xl border border-base-300">
                     <table className="w-full text-left">
                         <thead className="border-b border-base-300">
@@ -180,6 +288,7 @@ const App: React.FC = () => {
                                 <th className="p-4">Niche</th>
                                 <th className="p-4">Tier</th>
                                 <th className="p-4">Last Activity</th>
+                                <th className="p-4">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -191,6 +300,11 @@ const App: React.FC = () => {
                                     <td className="p-4">{a.niche}</td>
                                     <td className="p-4"><span className={`px-2 py-1 text-xs rounded-full border ${getTierColor(a.tier)}`}>{a.tier}</span></td>
                                     <td className="p-4">{a.last_activity}</td>
+                                    <td className="p-4">
+                                        <button onClick={() => handleDeleteAffiliate(a.id, a.name)} className="text-slate-500 hover:text-red-400 p-1 rounded-full hover:bg-red-500/10" aria-label={`Delete ${a.name}`}>
+                                            <TrashIcon />
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -290,6 +404,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-base-100 text-base-content font-sans">
+      {isAddModalOpen && <AddAffiliateModal onClose={() => setIsAddModalOpen(false)} onAdd={handleAddAffiliate} />}
       {/* Sidebar */}
       <aside className="w-64 bg-base-200/50 border-r border-base-300 flex flex-col">
         <div className="p-6">

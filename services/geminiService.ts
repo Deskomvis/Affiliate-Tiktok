@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 const API_KEY = process.env.API_KEY;
@@ -95,6 +94,18 @@ Here are the possible actions and their required JSON formats:
             "frequency": "Weekly",
             "day": "Every Friday",
             "message_template": "Hi {name}, jangan lupa upload konten promo minggu ini sebelum Jumat malam ya! 📅"
+          }
+        }
+
+6.  **Delete Affiliator**:
+    -   **action**: "delete_affiliator"
+    -   **data**: An object containing the name of the affiliator to delete.
+    -   **Example user input**: "delete affiliator Rizky Anwar"
+    -   **JSON output format**:
+        {
+          "action": "delete_affiliator",
+          "data": {
+            "name": "Rizky Anwar"
           }
         }
 
