@@ -4,7 +4,7 @@ export enum View {
   Affiliates = 'Affiliates',
   Broadcast = 'Broadcast',
   Samples = 'Samples',
-  Reminders = 'Reminders',
+  Products = 'Products',
   Treatment = 'Treatment',
 }
 
@@ -22,29 +22,16 @@ export interface Affiliator {
 export interface Sample {
   id: string;
   name: string;
+  product_name: string;
   request_date: string;
   status: 'Requested' | 'Processing' | 'Shipped' | 'Received';
   reminder_message?: string;
 }
 
-export interface Broadcast {
+export interface Product {
   id: string;
-  broadcast_type: 'AI-generated' | 'Manual';
-  message_template: string;
-  delivery_schedule: string;
-  target_affiliators: string[];
-  sending_options?: {
-    random_delay: { min: number; max: number };
-    batching: { size: number; delay_minutes: { min: number; max: number } };
-  };
-}
-
-export interface Reminder {
-  id: string;
-  reminder_type: string;
-  frequency: string;
-  day: string;
-  message_template: string;
+  name: string;
+  link: string;
 }
 
 export interface Treatment {

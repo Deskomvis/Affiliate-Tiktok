@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 const API_KEY = process.env.API_KEY;
@@ -81,23 +82,8 @@ Here are the possible actions and their required JSON formats:
             "reward_suggestion": "Bonus Rp100.000 atau shoutout di grup affiliator."
           }
         }
-
-5.  **Smart Reminder**:
-    -   **action**: "smart_reminder"
-    -   **data**: A single reminder object.
-    -   **Example user input**: "smart reminder for posting deadline, weekly every friday"
-    -   **JSON output format**:
-        {
-          "action": "smart_reminder",
-          "data": {
-            "reminder_type": "Posting Deadline",
-            "frequency": "Weekly",
-            "day": "Every Friday",
-            "message_template": "Hi {name}, jangan lupa upload konten promo minggu ini sebelum Jumat malam ya! 📅"
-          }
-        }
         
-6.  **Delete Affiliator**:
+5.  **Delete Affiliator**:
     -   **action**: "delete_affiliator"
     -   **data**: An object containing the name of the affiliator to delete.
     -   **Example user input**: "delete affiliator Rizky Anwar"
