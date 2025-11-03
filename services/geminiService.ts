@@ -96,7 +96,7 @@ Here are the possible actions and their required JSON formats:
             "message_template": "Hi {name}, jangan lupa upload konten promo minggu ini sebelum Jumat malam ya! 📅"
           }
         }
-
+        
 6.  **Delete Affiliator**:
     -   **action**: "delete_affiliator"
     -   **data**: An object containing the name of the affiliator to delete.

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Affiliator, Sample, Broadcast, Reminder, Treatment } from './types';
 import { NAV_ITEMS, INITIAL_AFFILIATORS, INITIAL_SAMPLES, INITIAL_REMINDERS } from './constants';
-import { processCommand } from './services/geminiService';
-import { SendIcon, LoaderIcon, PlusIcon, TrashIcon, XIcon } from './components/Icons';
+import { PlusIcon, TrashIcon, XIcon, WhatsappIcon } from './components/Icons';
 
 // Custom hook for localStorage persistence
 const usePersistentState = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -110,12 +110,108 @@ const AddAffiliateModal = ({ onClose, onAdd }: { onClose: () => void; onAdd: (af
     );
 };
 
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, children }: { isOpen: boolean; onClose: () => void; onConfirm: () => void; title: string; children?: React.ReactNode }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
+            <div className="bg-base-200 rounded-2xl shadow-xl w-full max-w-md border border-base-300 animate-fade-in-up">
+                <div className="p-6 flex justify-between items-center border-b border-base-300">
+                    <h2 className="text-xl font-bold text-primary-content">{title}</h2>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-base-300 text-slate-400" aria-label="Close modal">
+                        <XIcon />
+                    </button>
+                </div>
+                <div className="p-6">
+                    {children}
+                </div>
+                <div className="p-6 flex justify-end gap-3 border-t border-base-300">
+                    <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-base-300 hover:bg-base-300/80 text-primary-content font-semibold">Jangan Delete</button>
+                    <button type="button" onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold">Ya Delete</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const WhatsappTemplateModal = ({ isOpen, onClose, affiliate }: { isOpen: boolean; onClose: () => void; affiliate: Affiliator | null }) => {
+    if (!isOpen || !affiliate) return null;
+
+    const handleTemplateClick = (template: 'greeting' | 'video' | 'image' | 'blank') => {
+        let message = '';
+        const name = affiliate.name.split(' ')[0]; // Use first name
+
+        switch (template) {
+            case 'greeting':
+                message = `Halo kak ${name}, semoga sehat selalu ya!`;
+                break;
+            case 'video':
+                const videoUrl = prompt("Masukkan URL video yang ingin dikirim:");
+                if (videoUrl) {
+                    message = `Halo kak ${name}, jangan lupa cek video terbaru kita ya! Ini linknya: ${videoUrl}`;
+                } else return; // User cancelled
+                break;
+            case 'image':
+                const imageUrl = prompt("Masukkan URL gambar:");
+                if (!imageUrl) return; // User cancelled
+                const text = prompt("Masukkan teks untuk gambar:");
+                if (text === null) return; // User cancelled
+                message = `${text} ${imageUrl}`;
+                break;
+            case 'blank':
+                message = '';
+                break;
+        }
+
+        const cleanWhatsapp = affiliate.whatsapp.replace(/[^0-9]/g, '');
+        const encodedMessage = encodeURIComponent(message);
+        const url = `https://wa.me/${cleanWhatsapp}?text=${encodedMessage}`;
+        
+        window.open(url, '_blank');
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
+            <div className="bg-base-200 rounded-2xl shadow-xl w-full max-w-md border border-base-300 animate-fade-in-up">
+                <div className="p-6 flex justify-between items-center border-b border-base-300">
+                    <h2 className="text-xl font-bold text-primary-content">Send WhatsApp to {affiliate.name}</h2>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-base-300 text-slate-400" aria-label="Close modal">
+                        <XIcon />
+                    </button>
+                </div>
+                <div className="p-6 space-y-3">
+                    <h3 className="text-secondary font-semibold">Pilih Template Pesan:</h3>
+                    <button onClick={() => handleTemplateClick('greeting')} className="w-full text-left p-4 rounded-lg bg-base-300 hover:bg-primary/20 transition-colors">1. Salam</button>
+                    <button onClick={() => handleTemplateClick('video')} className="w-full text-left p-4 rounded-lg bg-base-300 hover:bg-primary/20 transition-colors">2. Kirim Link Video</button>
+                    <button onClick={() => handleTemplateClick('image')} className="w-full text-left p-4 rounded-lg bg-base-300 hover:bg-primary/20 transition-colors">3. Kirim Gambar dan Teks</button>
+                    <button onClick={() => handleTemplateClick('blank')} className="w-full text-left p-4 rounded-lg bg-base-300 hover:bg-primary/20 transition-colors">4. Blank Message</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 const App: React.FC = () => {
   const [view, setView] = useState<View>(View.Dashboard);
-  const [command, setCommand] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [affiliateToDelete, setAffiliateToDelete] = useState<Affiliator | null>(null);
+  const [isWhatsappModalOpen, setIsWhatsappModalOpen] = useState(false);
+  const [selectedAffiliateForWhatsapp, setSelectedAffiliateForWhatsapp] = useState<Affiliator | null>(null);
+
+
+  // Broadcast state
+  const [selectedAffiliates, setSelectedAffiliates] = useState<string[]>([]);
+  const [broadcastMessage, setBroadcastMessage] = useState('Hi {name}, yuk semangat posting konten minggu ini! 🎥');
+  const [broadcastSearch, setBroadcastSearch] = useState('');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [schedule, setSchedule] = useState('');
+  const [useSmartSending, setUseSmartSending] = useState(false);
+  const [randomDelay, setRandomDelay] = useState({ min: 1, max: 30 });
+  const [batchConfig, setBatchConfig] = useState({ size: 5, delayMin: 1, delayMax: 2 });
+
 
   const [affiliators, setAffiliators] = usePersistentState<Affiliator[]>('affiliators', INITIAL_AFFILIATORS);
   const [samples, setSamples] = usePersistentState<Sample[]>('samples', INITIAL_SAMPLES);
@@ -128,63 +224,26 @@ const App: React.FC = () => {
       setIsAddModalOpen(false);
   };
   
-  const handleDeleteAffiliate = (id: string, name: string) => {
-      if (window.confirm(`Are you sure you want to delete ${name}?`)) {
-          setAffiliators(prev => prev.filter(a => a.id !== id));
-      }
+  const handleOpenDeleteModal = (affiliate: Affiliator) => {
+    setAffiliateToDelete(affiliate);
+    setIsDeleteModalOpen(true);
   };
 
-  const handleCommandSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!command.trim() || isLoading) return;
+  const handleCloseDeleteModal = () => {
+    setAffiliateToDelete(null);
+    setIsDeleteModalOpen(false);
+  };
 
-    setIsLoading(true);
-    setError(null);
-
-    const response = await processCommand(command);
-    setCommand('');
-    setIsLoading(false);
-
-    if (response.action === 'error') {
-      setError(response.message);
-      return;
+  const handleConfirmDelete = () => {
+    if (affiliateToDelete) {
+      setAffiliators(prev => prev.filter(a => a.id !== affiliateToDelete.id));
+      handleCloseDeleteModal();
     }
-
-    switch (response.action) {
-      case 'add_affiliator':
-        setAffiliators(prev => [...prev, ...response.data.map((a: Omit<Affiliator, 'id'>) => ({ ...a, id: crypto.randomUUID() }))]);
-        setView(View.Affiliates);
-        break;
-      case 'broadcast_message':
-        setBroadcasts(prev => [...prev, { ...response.data, id: crypto.randomUUID() }]);
-        setView(View.Broadcast);
-        break;
-      case 'manage_sample':
-        setSamples(prev => [...prev, ...response.data.map((s: Omit<Sample, 'id'>) => ({ ...s, id: crypto.randomUUID() }))]);
-        setView(View.Samples);
-        break;
-      case 'treatment_affiliator':
-        setTreatments(prev => [...prev, { ...response.data, id: crypto.randomUUID() }]);
-        setView(View.Treatment);
-        break;
-      case 'smart_reminder':
-        setReminders(prev => [...prev, { ...response.data, id: crypto.randomUUID() }]);
-        setView(View.Reminders);
-        break;
-      case 'delete_affiliator': {
-            const nameToDelete = response.data.name;
-            const affiliateToDelete = affiliators.find(a => a.name.toLowerCase() === nameToDelete.toLowerCase());
-            if (affiliateToDelete) {
-               handleDeleteAffiliate(affiliateToDelete.id, affiliateToDelete.name);
-            } else {
-                setError(`Affiliate "${nameToDelete}" not found.`);
-            }
-            setView(View.Affiliates);
-            break;
-        }
-      default:
-        setError('Received an unknown action from the AI.');
-    }
+  };
+  
+  const handleOpenWhatsappModal = (affiliate: Affiliator) => {
+      setSelectedAffiliateForWhatsapp(affiliate);
+      setIsWhatsappModalOpen(true);
   };
 
   const getTierColor = (tier: Affiliator['tier']) => {
@@ -300,8 +359,11 @@ const App: React.FC = () => {
                                     <td className="p-4">{a.niche}</td>
                                     <td className="p-4"><span className={`px-2 py-1 text-xs rounded-full border ${getTierColor(a.tier)}`}>{a.tier}</span></td>
                                     <td className="p-4">{a.last_activity}</td>
-                                    <td className="p-4">
-                                        <button onClick={() => handleDeleteAffiliate(a.id, a.name)} className="text-slate-500 hover:text-red-400 p-1 rounded-full hover:bg-red-500/10" aria-label={`Delete ${a.name}`}>
+                                    <td className="p-4 flex items-center gap-2">
+                                        <button onClick={() => handleOpenWhatsappModal(a)} className="text-slate-500 hover:text-green-400 p-1 rounded-full hover:bg-green-500/10" aria-label={`Send WhatsApp to ${a.name}`}>
+                                            <WhatsappIcon />
+                                        </button>
+                                        <button onClick={() => handleOpenDeleteModal(a)} className="text-slate-500 hover:text-red-400 p-1 rounded-full hover:bg-red-500/10" aria-label={`Delete ${a.name}`}>
                                             <TrashIcon />
                                         </button>
                                     </td>
@@ -342,24 +404,174 @@ const App: React.FC = () => {
                     </div>
                 </div>
             );
-        case View.Broadcast:
-             return (
+        case View.Broadcast: {
+            const handleSelectAffiliate = (id: string) => {
+                setSelectedAffiliates(prev => 
+                    prev.includes(id) ? prev.filter(affId => affId !== id) : [...prev, id]
+                );
+            };
+
+            const filteredAffiliates = affiliators.filter(a => a.name.toLowerCase().includes(broadcastSearch.toLowerCase()));
+
+            const handleSelectAll = () => {
+                if (selectedAffiliates.length === filteredAffiliates.length) {
+                    setSelectedAffiliates([]);
+                } else {
+                    setSelectedAffiliates(filteredAffiliates.map(a => a.id));
+                }
+            };
+            
+            const handleBroadcastSubmit = () => {
+                if (selectedAffiliates.length === 0 || !broadcastMessage.trim()) {
+                    alert("Please select affiliates and write a message.");
+                    return;
+                }
+                setIsBroadcasting(true);
+
+                // Simulate API call to Fonnte
+                setTimeout(() => {
+                    const targets = affiliators.filter(a => selectedAffiliates.includes(a.id));
+                    const newBroadcast: Broadcast = {
+                        id: crypto.randomUUID(),
+                        broadcast_type: 'Manual',
+                        message_template: broadcastMessage,
+                        delivery_schedule: schedule.trim() ? new Date(schedule).toLocaleString() : 'Immediately',
+                        target_affiliators: targets.map(t => t.name)
+                    };
+
+                    if (useSmartSending) {
+                        newBroadcast.sending_options = {
+                            random_delay: { min: randomDelay.min, max: randomDelay.max },
+                            batching: { size: batchConfig.size, delay_minutes: { min: batchConfig.delayMin, max: batchConfig.delayMax } }
+                        };
+                    }
+
+                    setBroadcasts(prev => [newBroadcast, ...prev]);
+                    setIsBroadcasting(false);
+                    setSelectedAffiliates([]);
+                    setBroadcastMessage('Hi {name}, yuk semangat posting konten minggu ini! 🎥');
+                    setSchedule('');
+                    setUseSmartSending(false);
+                    alert(`Broadcast scheduled/sent to ${targets.length} affiliates!`);
+                }, 1500);
+            };
+
+            return (
                 <div className="space-y-6">
-                    <h1 className="text-3xl font-bold text-primary-content">Broadcast Messages</h1>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {broadcasts.map(b => (
-                             <div key={b.id} className="bg-base-200 p-6 rounded-xl border border-base-300 space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <h2 className="font-semibold text-secondary">{b.target_affiliators}</h2>
-                                    <span className="text-xs text-slate-400">{b.delivery_schedule}</span>
+                    <h1 className="text-3xl font-bold text-primary-content">Broadcast Center</h1>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-250px)]">
+                        {/* Left Column: Affiliate Selection */}
+                        <div className="bg-base-200 rounded-xl border border-base-300 flex flex-col">
+                           <div className="p-4 border-b border-base-300 space-y-3">
+                                <input 
+                                    type="text"
+                                    placeholder="Search affiliate..."
+                                    value={broadcastSearch}
+                                    onChange={e => setBroadcastSearch(e.target.value)}
+                                    className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none"
+                                />
+                                <div className="flex items-center justify-between text-sm">
+                                     <div className="flex items-center gap-2">
+                                        <input 
+                                            type="checkbox"
+                                            id="selectAll"
+                                            className="h-4 w-4 rounded bg-base-300 border-slate-500 text-primary focus:ring-primary"
+                                            checked={filteredAffiliates.length > 0 && selectedAffiliates.length === filteredAffiliates.length}
+                                            onChange={handleSelectAll}
+                                        />
+                                        <label htmlFor="selectAll" className="font-medium text-slate-300">Select All</label>
+                                    </div>
+                                    <span className="text-secondary">{selectedAffiliates.length} of {filteredAffiliates.length} selected</span>
+                               </div>
+                           </div>
+                           <ul className="flex-1 overflow-y-auto p-2">
+                               {filteredAffiliates.map(a => (
+                                   <li key={a.id}>
+                                       <label htmlFor={`aff-${a.id}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-base-300/50 cursor-pointer">
+                                           <input 
+                                               type="checkbox" 
+                                               id={`aff-${a.id}`}
+                                               className="h-4 w-4 rounded bg-base-300 border-slate-500 text-primary focus:ring-primary"
+                                               checked={selectedAffiliates.includes(a.id)}
+                                               onChange={() => handleSelectAffiliate(a.id)}
+                                           />
+                                           <div>
+                                               <p className="font-semibold text-primary-content">{a.name}</p>
+                                               <p className="text-xs text-slate-400">{a.whatsapp}</p>
+                                           </div>
+                                       </label>
+                                   </li>
+                               ))}
+                           </ul>
+                        </div>
+                        {/* Right Column: Message Composer */}
+                        <div className="bg-base-200 rounded-xl border border-base-300 p-4 flex flex-col justify-between">
+                            <div className="space-y-3 overflow-y-auto pr-2">
+                                <div>
+                                    <label htmlFor="broadcastMessage" className="font-semibold text-secondary">Message Composer</label>
+                                    <textarea
+                                        id="broadcastMessage"
+                                        rows={5}
+                                        value={broadcastMessage}
+                                        onChange={e => setBroadcastMessage(e.target.value)}
+                                        className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none mt-2"
+                                    />
+                                    <p className="text-xs text-slate-400">Gunakan <code className="bg-base-300 px-1 rounded">{'{name}'}</code> untuk personalisasi nama. Contoh: 'Hi {'{name}'}, ...'</p>
                                 </div>
-                                <p className="text-primary-content bg-base-300 p-4 rounded-lg italic">"{b.message_template}"</p>
-                                <span className="text-xs font-medium bg-primary/20 text-primary px-2 py-1 rounded-full">{b.broadcast_type}</span>
+                                
+                                <div className="pt-2">
+                                     <label htmlFor="schedule" className="text-sm font-medium text-slate-400 mb-1 block">Schedule (Optional)</label>
+                                     <input id="schedule" type="datetime-local" value={schedule} onChange={e => setSchedule(e.target.value)} className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
+                                     <p className="text-xs text-slate-500 mt-1">Jika kosong, broadcast akan dikirim segera.</p>
+                                </div>
+
+                                <div className="pt-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" checked={useSmartSending} onChange={() => setUseSmartSending(!useSmartSending)} className="h-4 w-4 rounded bg-base-300 border-slate-500 text-primary focus:ring-primary"/>
+                                        <span className="font-medium text-slate-300">Enable Smart Sending Options</span>
+                                    </label>
+                                </div>
+
+                                {useSmartSending && (
+                                    <div className="p-4 bg-base-300/50 rounded-lg space-y-4 border border-base-300 animate-fade-in-up">
+                                        <div>
+                                            <label className="text-sm font-medium text-slate-400 mb-1 block">Jeda acak antar pesan (detik)</label>
+                                            <div className="flex items-center gap-2">
+                                                <input type="number" value={randomDelay.min} onChange={e => setRandomDelay(p => ({...p, min: Number(e.target.value)}))} className="w-full bg-base-100 p-2 rounded-md" />
+                                                <span>to</span>
+                                                <input type="number" value={randomDelay.max} onChange={e => setRandomDelay(p => ({...p, max: Number(e.target.value)}))} className="w-full bg-base-100 p-2 rounded-md" />
+                                            </div>
+                                        </div>
+                                         <div>
+                                            <label className="text-sm font-medium text-slate-400 mb-1 block">Jeda setelah mengirim</label>
+                                            <div className="flex items-center gap-2">
+                                                <input type="number" value={batchConfig.size} onChange={e => setBatchConfig(p => ({...p, size: Number(e.target.value)}))} className="w-1/2 bg-base-100 p-2 rounded-md" />
+                                                <span className="text-sm">nomor</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-slate-400 mb-1 block">Selama (menit)</label>
+                                            <div className="flex items-center gap-2">
+                                                 <input type="number" value={batchConfig.delayMin} onChange={e => setBatchConfig(p => ({...p, delayMin: Number(e.target.value)}))} className="w-full bg-base-100 p-2 rounded-md" />
+                                                 <span>to</span>
+                                                 <input type="number" value={batchConfig.delayMax} onChange={e => setBatchConfig(p => ({...p, delayMax: Number(e.target.value)}))} className="w-full bg-base-100 p-2 rounded-md" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        ))}
+                            <button 
+                                onClick={handleBroadcastSubmit}
+                                disabled={isBroadcasting || selectedAffiliates.length === 0 || !broadcastMessage.trim()}
+                                className="w-full flex items-center justify-center gap-2 mt-4 px-4 py-3 rounded-lg bg-primary hover:bg-primary-focus text-primary-content font-semibold transition-colors disabled:bg-base-300 disabled:text-slate-500"
+                            >
+                                {isBroadcasting ? `Sending...` : `Send Broadcast to ${selectedAffiliates.length} Affiliate(s)`}
+                            </button>
+                        </div>
                     </div>
                 </div>
             );
+        }
          case View.Reminders:
             return (
                 <div className="space-y-6">
@@ -405,6 +617,21 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-base-100 text-base-content font-sans">
       {isAddModalOpen && <AddAffiliateModal onClose={() => setIsAddModalOpen(false)} onAdd={handleAddAffiliate} />}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        title="Konfirmasi Hapus"
+      >
+        <p className="text-base-content">
+          Yakin delete <strong className="text-primary-content">{affiliateToDelete?.name}</strong>?
+        </p>
+      </ConfirmationModal>
+      <WhatsappTemplateModal 
+        isOpen={isWhatsappModalOpen}
+        onClose={() => setIsWhatsappModalOpen(false)}
+        affiliate={selectedAffiliateForWhatsapp}
+      />
       {/* Sidebar */}
       <aside className="w-64 bg-base-200/50 border-r border-base-300 flex flex-col">
         <div className="p-6">
@@ -432,28 +659,6 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto p-8">
           {renderView()}
-        </div>
-        
-        {/* Command Bar */}
-        <div className="p-4 border-t border-base-300 bg-base-200/50">
-          {error && <div className="text-red-400 text-sm mb-2 px-2">{error}</div>}
-          <form onSubmit={handleCommandSubmit} className="relative">
-            <input
-              type="text"
-              value={command}
-              onChange={(e) => setCommand(e.target.value)}
-              placeholder="Add affiliator, create broadcast, manage sample..."
-              className="w-full pl-4 pr-12 py-3 bg-base-300 text-primary-content rounded-lg border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
-              disabled={isLoading}
-            />
-            <button 
-              type="submit" 
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-primary hover:bg-primary-focus disabled:bg-base-300 disabled:text-slate-500 text-primary-content transition-all"
-              disabled={isLoading || !command.trim()}
-            >
-              {isLoading ? <LoaderIcon /> : <SendIcon />}
-            </button>
-          </form>
         </div>
       </main>
     </div>

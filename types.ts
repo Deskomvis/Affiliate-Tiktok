@@ -32,7 +32,11 @@ export interface Broadcast {
   broadcast_type: 'AI-generated' | 'Manual';
   message_template: string;
   delivery_schedule: string;
-  target_affiliators: string;
+  target_affiliators: string[];
+  sending_options?: {
+    random_delay: { min: number; max: number };
+    batching: { size: number; delay_minutes: { min: number; max: number } };
+  };
 }
 
 export interface Reminder {
