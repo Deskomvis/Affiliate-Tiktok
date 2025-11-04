@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Affiliator, Sample, Treatment, Product } from './types';
-import { NAV_ITEMS, INITIAL_AFFILIATORS, INITIAL_SAMPLES, INITIAL_PRODUCTS } from './constants';
-import { PlusIcon, TrashIcon, XIcon, WhatsappIcon, LinkIcon, CopyIcon, CheckIcon, EditIcon } from './components/Icons';
+import { View, Affiliator, Sample, Product } from './types';
+import { NAV_ITEMS, INITIAL_AFFILIATORS, INITIAL_SAMPLES, INITIAL_PRODUCTS, BROADCAST_TEMPLATES, TemplateCategory } from './constants';
+import { PlusIcon, TrashIcon, XIcon, WhatsappIcon, LinkIcon, CopyIcon, CheckIcon, EditIcon, SparklesIcon } from './components/Icons';
 
 // Custom hook for localStorage persistence
 const usePersistentState = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -561,6 +561,41 @@ const WhatsappTemplateModal = ({ isOpen, onClose, affiliate, initialMessage }: {
 };
 
 
+const BroadcastTemplateModal = ({ onClose, onSelect }: { onClose: () => void; onSelect: (message: string) => void; }) => {
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+            <div className="bg-base-200 rounded-2xl shadow-xl w-full max-w-2xl border border-base-300 animate-fade-in-up flex flex-col max-h-[90vh]">
+                <div className="p-6 flex justify-between items-center border-b border-base-300 sticky top-0 bg-base-200 z-10">
+                    <h2 className="text-xl font-bold text-primary-content">Broadcast Templates</h2>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-base-300 text-slate-400" aria-label="Close modal">
+                        <XIcon />
+                    </button>
+                </div>
+                <div className="p-6 space-y-6 overflow-y-auto">
+                    {BROADCAST_TEMPLATES.map(category => (
+                        <div key={category.category}>
+                            <h3 className="text-lg font-semibold text-secondary mb-3">{category.category}</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {category.templates.map(template => (
+                                    <button 
+                                        key={template.title}
+                                        onClick={() => onSelect(template.message)}
+                                        className="bg-base-300 p-4 rounded-lg text-left hover:bg-primary/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                                    >
+                                        <p className="font-bold text-primary-content">{template.title}</p>
+                                        <p className="text-sm text-slate-400 mt-1">{template.message}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 const App: React.FC = () => {
   const [view, setView] = useState<View>(View.Products);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -590,7 +625,9 @@ const App: React.FC = () => {
   const [broadcastSearch, setBroadcastSearch] = useState('');
   const [sentAffiliateIds, setSentAffiliateIds] = useState<string[]>([]);
   const [hideSent, setHideSent] = useState(false);
-  
+  const [isBroadcastTemplateModalOpen, setIsBroadcastTemplateModalOpen] = useState(false);
+  const [selectedBroadcastProduct, setSelectedBroadcastProduct] = useState<string>('');
+
   // Product state
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
 
@@ -598,7 +635,6 @@ const App: React.FC = () => {
   const [affiliators, setAffiliators] = usePersistentState<Affiliator[]>('affiliators', INITIAL_AFFILIATORS);
   const [samples, setSamples] = usePersistentState<Sample[]>('samples', INITIAL_SAMPLES);
   const [products, setProducts] = usePersistentState<Product[]>('products', INITIAL_PRODUCTS);
-  const [treatments, setTreatments] = usePersistentState<Treatment[]>('treatments', []);
 
 
   const handleAddAffiliate = (newAffiliate: Omit<Affiliator, 'id'>) => {
@@ -1000,10 +1036,18 @@ const App: React.FC = () => {
                     return;
                 }
                 
+                const product = products.find(p => p.id === selectedBroadcastProduct);
+                let messageWithProduct = broadcastMessage;
+                if (product) {
+                    messageWithProduct = messageWithProduct
+                        .replace(/\[nama produk\]/g, product.name)
+                        .replace(/\[link produk\]/g, product.link);
+                }
+                
                 const targets = affiliators.filter(a => selectedAffiliates.includes(a.id));
                 
                 targets.forEach(affiliate => {
-                    const personalizedMessage = broadcastMessage.replace(/\{name\}/g, affiliate.name.split(' ')[0]);
+                    const personalizedMessage = messageWithProduct.replace(/\{name\}/g, affiliate.name.split(' ')[0]);
                     const cleanWhatsapp = affiliate.whatsapp.replace(/[^0-9]/g, '');
                     const encodedMessage = encodeURIComponent(personalizedMessage);
                     const url = `https://wa.me/${cleanWhatsapp}?text=${encodedMessage}`;
@@ -1078,15 +1122,35 @@ const App: React.FC = () => {
                         <div className="bg-base-200 rounded-xl border border-base-300 p-4 flex flex-col justify-between">
                             <div className="space-y-3">
                                 <div>
-                                    <label htmlFor="broadcastMessage" className="font-semibold text-secondary">Message Composer</label>
+                                    <div className="flex justify-between items-center mb-2">
+                                      <label htmlFor="broadcastMessage" className="font-semibold text-secondary">Message Composer</label>
+                                      <button onClick={() => setIsBroadcastTemplateModalOpen(true)} className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-base-300 hover:bg-primary/20 text-secondary font-semibold transition-colors">
+                                        <SparklesIcon />
+                                        <span>Gunakan Template</span>
+                                      </button>
+                                    </div>
                                     <textarea
                                         id="broadcastMessage"
-                                        rows={8}
+                                        rows={6}
                                         value={broadcastMessage}
                                         onChange={e => setBroadcastMessage(e.target.value)}
-                                        className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none mt-2"
+                                        className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none"
                                     />
-                                    <p className="text-xs text-slate-400">Gunakan <code className="bg-base-300 px-1 rounded">{'{name}'}</code> untuk personalisasi nama. Contoh: 'Hi {'{name}'}, ...'</p>
+                                    <p className="text-xs text-slate-400 mt-1">Gunakan <code className="bg-base-300 px-1 rounded">{'{name}'}</code>, <code className="bg-base-300 px-1 rounded">{'[nama produk]'}</code>, dan <code className="bg-base-300 px-1 rounded">{'[link produk]'}</code> untuk personalisasi.</p>
+                                </div>
+                                <div>
+                                    <label htmlFor="productSelect" className="block text-sm font-medium text-slate-400 mb-1">Pilih Produk (Opsional)</label>
+                                    <select
+                                        id="productSelect"
+                                        value={selectedBroadcastProduct}
+                                        onChange={e => setSelectedBroadcastProduct(e.target.value)}
+                                        className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none appearance-none"
+                                    >
+                                        <option value="">-- Tidak ada produk dipilih --</option>
+                                        {products.map(p => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                             <button 
@@ -1101,32 +1165,6 @@ const App: React.FC = () => {
                 </div>
             );
         }
-        case View.Treatment:
-            return (
-                <div className="space-y-6">
-                    <h1 className="text-3xl font-bold text-primary-content">Affiliator Treatments</h1>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {treatments.map(t => (
-                            <div key={t.id} className="bg-base-200 p-6 rounded-xl border border-base-300 space-y-4">
-                                <div>
-                                    <h2 className="text-xl font-bold text-primary-content">{t.name}</h2>
-                                    <p className="text-sm text-secondary">{t.performance}</p>
-                                </div>
-                                <p className="bg-gradient-to-r from-sky-500 to-indigo-500 text-white p-4 rounded-lg shadow-lg">✨ {t.ai_message}</p>
-                                <div>
-                                    <h3 className="text-sm font-semibold text-slate-400 mb-1">Reward Suggestion</h3>
-                                    <p className="text-primary-content">{t.reward_suggestion}</p>
-                                </div>
-                            </div>
-                        ))}
-                         {treatments.length === 0 && (
-                           <div className="md:col-span-2 text-center p-8 text-slate-400 bg-base-200 rounded-xl border border-base-300">
-                               No special treatments have been generated yet.
-                           </div>
-                       )}
-                    </div>
-                </div>
-            );
       default:
         return <div>Select a view</div>;
     }
@@ -1135,6 +1173,13 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-base-100 text-base-content font-sans">
+      {isBroadcastTemplateModalOpen && <BroadcastTemplateModal 
+        onClose={() => setIsBroadcastTemplateModalOpen(false)}
+        onSelect={(message) => {
+            setBroadcastMessage(message);
+            setIsBroadcastTemplateModalOpen(false);
+        }}
+      />}
       {isAddModalOpen && <AddAffiliateModal onClose={() => setIsAddModalOpen(false)} onAdd={handleAddAffiliate} />}
       {isEditModalOpen && <EditAffiliateModal onClose={handleCloseEditModal} onSave={handleUpdateAffiliate} affiliate={affiliateToEdit} />}
       {isAddSampleModalOpen && <AddSampleModal onClose={() => setIsAddSampleModalOpen(false)} onAdd={handleAddSample} affiliates={affiliators} products={products} />}

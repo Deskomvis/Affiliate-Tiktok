@@ -67,23 +67,8 @@ Here are the possible actions and their required JSON formats:
             }
           ]
         }
-
-4.  **Treatment Affiliator**:
-    -   **action**: "treatment_affiliator"
-    -   **data**: A single treatment object.
-    -   **Example user input**: "treatment for Rizky Anwar, he was top 10 this month"
-    -   **JSON output format**:
-        {
-          "action": "treatment_affiliator",
-          "data": {
-            "name": "Rizky Anwar",
-            "performance": "Top 10 this month",
-            "ai_message": "Keren banget, Rizky! Konten kamu bulan ini masuk 10 besar performa terbaik. Tim sangat menghargai kontribusimu! 💪✨",
-            "reward_suggestion": "Bonus Rp100.000 atau shoutout di grup affiliator."
-          }
-        }
         
-5.  **Delete Affiliator**:
+4.  **Delete Affiliator**:
     -   **action**: "delete_affiliator"
     -   **data**: An object containing the name of the affiliator to delete.
     -   **Example user input**: "delete affiliator Rizky Anwar"

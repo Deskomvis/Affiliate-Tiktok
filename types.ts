@@ -5,7 +5,6 @@ export enum View {
   Broadcast = 'Broadcast',
   Samples = 'Samples',
   Products = 'Products',
-  Treatment = 'Treatment',
 }
 
 export interface Affiliator {
@@ -32,12 +31,4 @@ export interface Product {
   id: string;
   name: string;
   link: string;
-}
-
-export interface Treatment {
-  id: string;
-  name: string;
-  performance: string;
-  ai_message: string;
-  reward_suggestion: string;
 }
