@@ -1,10 +1,11 @@
 
 
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Affiliator, Sample, Product, ContentItem, ContentItemType } from './types';
 import { NAV_ITEMS, INITIAL_AFFILIATORS, INITIAL_SAMPLES, INITIAL_PRODUCTS, BROADCAST_TEMPLATES, TemplateCategory, INITIAL_CONTENT_BANK_ITEMS } from './constants';
-import { PlusIcon, TrashIcon, XIcon, WhatsappIcon, LinkIcon, CopyIcon, CheckIcon, EditIcon, SparklesIcon, FolderIcon, ChevronRightIcon, FolderPlusIcon, FilePlusIcon, UsersIcon } from './components/Icons';
+import { PlusIcon, TrashIcon, XIcon, WhatsappIcon, LinkIcon, CopyIcon, CheckIcon, EditIcon, SparklesIcon, FolderIcon, ChevronRightIcon, FolderPlusIcon, FilePlusIcon, UsersIcon, ExternalLinkIcon } from './components/Icons';
 
 // Custom hook for localStorage persistence
 const usePersistentState = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -1214,6 +1215,18 @@ const BankKontenView = () => {
                     <div className="flex items-center gap-2 flex-1">
                         {item.type === 'category' ? <FolderIcon /> : <LinkIcon />}
                         <span className="text-primary-content">{item.name}</span>
+                        {item.type === 'link' && item.link && (
+                            <a 
+                                href={item.link} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="ml-2 text-slate-500 hover:text-primary transition-colors"
+                                aria-label={`Open link for ${item.name}`}
+                                onClick={(e) => e.stopPropagation()} // Prevent row click events
+                            >
+                                <ExternalLinkIcon />
+                            </a>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
