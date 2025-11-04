@@ -1,6 +1,6 @@
 
-import { View, Affiliator, Sample, Product } from './types';
-import { HomeIcon, UsersIcon, MegaphoneIcon, BeakerIcon, PackageIcon } from './components/Icons';
+import { View, Affiliator, Sample, Product, ContentItem } from './types';
+import { HomeIcon, UsersIcon, MegaphoneIcon, BeakerIcon, PackageIcon, FolderIcon } from './components/Icons';
 
 export const NAV_ITEMS = [
   { id: View.Dashboard, label: 'Dashboard', icon: <HomeIcon /> },
@@ -8,6 +8,7 @@ export const NAV_ITEMS = [
   { id: View.Affiliates, label: 'Affiliates', icon: <UsersIcon /> },
   { id: View.Broadcast, label: 'Broadcast', icon: <MegaphoneIcon /> },
   { id: View.Samples, label: 'Samples', icon: <BeakerIcon /> },
+  { id: View.BankKonten, label: 'Bank Konten', icon: <FolderIcon /> },
 ];
 
 // FIX: Explicitly type the array with Affiliator[] to prevent type widening on the 'tier' property.
@@ -58,6 +59,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     { id: 'prod-1', name: 'Serum Wajah Vitamin C', link: 'https://tokopedia.link/serum-vitc' },
     { id: 'prod-2', name: 'Matte Lipstick Shade "Ruby"', link: 'https://tokopedia.link/lipstick-ruby' },
 ];
+
+export const INITIAL_CONTENT_BANK_ITEMS: ContentItem[] = [];
 
 
 export interface BroadcastTemplate {

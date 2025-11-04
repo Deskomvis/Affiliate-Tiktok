@@ -5,6 +5,7 @@ export enum View {
   Broadcast = 'Broadcast',
   Samples = 'Samples',
   Products = 'Products',
+  BankKonten = 'Bank Konten',
 }
 
 export interface Affiliator {
@@ -32,4 +33,14 @@ export interface Product {
   id: string;
   name: string;
   link: string;
+}
+
+export type ContentItemType = 'category' | 'link';
+
+export interface ContentItem {
+  id: string;
+  name: string;
+  type: ContentItemType;
+  link?: string;
+  parentId: string | null;
 }

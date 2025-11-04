@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Affiliator, Sample, Product } from './types';
-import { NAV_ITEMS, INITIAL_AFFILIATORS, INITIAL_SAMPLES, INITIAL_PRODUCTS, BROADCAST_TEMPLATES, TemplateCategory } from './constants';
-import { PlusIcon, TrashIcon, XIcon, WhatsappIcon, LinkIcon, CopyIcon, CheckIcon, EditIcon, SparklesIcon } from './components/Icons';
+import { View, Affiliator, Sample, Product, ContentItem, ContentItemType } from './types';
+import { NAV_ITEMS, INITIAL_AFFILIATORS, INITIAL_SAMPLES, INITIAL_PRODUCTS, BROADCAST_TEMPLATES, TemplateCategory, INITIAL_CONTENT_BANK_ITEMS } from './constants';
+import { PlusIcon, TrashIcon, XIcon, WhatsappIcon, LinkIcon, CopyIcon, CheckIcon, EditIcon, SparklesIcon, FolderIcon, ChevronRightIcon, FolderPlusIcon, FilePlusIcon } from './components/Icons';
 
 // Custom hook for localStorage persistence
 const usePersistentState = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -730,6 +730,113 @@ const BroadcastTemplateModal = ({ onClose, onSelect }: { onClose: () => void; on
     );
 };
 
+const AddEditContentItemModal = ({ isOpen, onClose, onSave, itemToEdit, parentId }: { isOpen: boolean; onClose: () => void; onSave: (item: Omit<ContentItem, 'id'> | ContentItem) => void; itemToEdit: ContentItem | null; parentId: string | null; }) => {
+    const [name, setName] = useState('');
+    const [type, setType] = useState<ContentItemType>('category');
+    const [link, setLink] = useState('');
+
+    const isEditing = !!itemToEdit;
+
+    useEffect(() => {
+        if (isOpen) {
+            if (isEditing) {
+                setName(itemToEdit.name);
+                setType(itemToEdit.type);
+                setLink(itemToEdit.link || '');
+            } else {
+                // Reset for new item
+                setName('');
+                setType('category');
+                setLink('');
+            }
+        }
+    }, [isOpen, itemToEdit, isEditing]);
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name || (type === 'link' && !link)) {
+            alert('Please fill all required fields.');
+            return;
+        }
+
+        if (type === 'link') {
+            try {
+                new URL(link);
+            } catch (_) {
+                alert('Please enter a valid URL.');
+                return;
+            }
+        }
+
+        if (isEditing) {
+            onSave({
+                ...itemToEdit,
+                name,
+                type,
+                link: type === 'link' ? link : undefined,
+            });
+        } else {
+            onSave({
+                name,
+                type,
+                link: type === 'link' ? link : undefined,
+                parentId: parentId,
+            });
+        }
+    };
+    
+    const getTitle = () => {
+      if (isEditing) {
+        return itemToEdit.type === 'category' ? 'Edit Category' : 'Edit Link';
+      }
+      return 'Add New Item';
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+            <div className="bg-base-200 rounded-2xl shadow-xl w-full max-w-md border border-base-300 animate-fade-in-up">
+                <div className="p-6 flex justify-between items-center border-b border-base-300">
+                    <h2 className="text-xl font-bold text-primary-content">{getTitle()}</h2>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-base-300 text-slate-400" aria-label="Close modal">
+                        <XIcon />
+                    </button>
+                </div>
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-2">Type</label>
+                        <div className="flex gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="type" value="category" checked={type === 'category'} onChange={() => setType('category')} className="radio radio-primary" />
+                                <span className="text-primary-content">Category</span>
+                            </label>
+                             <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="type" value="link" checked={type === 'link'} onChange={() => setType('link')} className="radio radio-primary" />
+                                <span className="text-primary-content">Link</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label htmlFor="itemName" className="block text-sm font-medium text-slate-400 mb-1">{type === 'category' ? 'Category Name' : 'Link Name'}</label>
+                        <input id="itemName" type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
+                    </div>
+                    {type === 'link' && (
+                        <div>
+                            <label htmlFor="itemLink" className="block text-sm font-medium text-slate-400 mb-1">Google Drive Link</label>
+                            <input id="itemLink" type="url" value={link} onChange={e => setLink(e.target.value)} placeholder="https://drive.google.com/..." required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
+                        </div>
+                    )}
+                    <div className="pt-4 flex justify-end gap-3">
+                        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-base-300 hover:bg-base-300/80 text-primary-content font-semibold">Cancel</button>
+                        <button type="submit" className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-focus text-primary-content font-semibold">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>(View.Affiliates);
@@ -750,6 +857,8 @@ const App: React.FC = () => {
   const [sampleToDelete, setSampleToDelete] = useState<Sample | null>(null);
   const [isDeleteProductModalOpen, setIsDeleteProductModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isDeleteContentItemModalOpen, setIsDeleteContentItemModalOpen] = useState(false);
+  const [contentItemToDelete, setContentItemToDelete] = useState<ContentItem | null>(null);
 
   // WhatsApp Modal State
   const [isWhatsappModalOpen, setIsWhatsappModalOpen] = useState(false);
@@ -767,12 +876,20 @@ const App: React.FC = () => {
   const [broadcastProductFilter, setBroadcastProductFilter] = useState<string>('');
 
   // Product state
-  const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
+  const [copiedItemId, setCopiedItemId] = useState<string | null>(null);
+
+  // Bank Konten state
+  const [isContentItemModalOpen, setIsContentItemModalOpen] = useState(false);
+  const [contentItemToEdit, setContentItemToEdit] = useState<ContentItem | null>(null);
+  const [parentCategoryId, setParentCategoryId] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+
 
   // Data State
   const [affiliators, setAffiliators] = usePersistentState<Affiliator[]>('affiliators', INITIAL_AFFILIATORS);
   const [samples, setSamples] = usePersistentState<Sample[]>('samples', INITIAL_SAMPLES);
   const [products, setProducts] = usePersistentState<Product[]>('products', INITIAL_PRODUCTS);
+  const [contentBankItems, setContentBankItems] = usePersistentState<ContentItem[]>('contentBank', INITIAL_CONTENT_BANK_ITEMS);
 
 
   const handleAddAffiliate = (newAffiliate: Omit<Affiliator, 'id'>) => {
@@ -907,15 +1024,83 @@ const App: React.FC = () => {
         }
     };
     
-    const handleCopyProductLink = (link: string, productId: string) => {
+    const handleCopyLink = (link: string, id: string) => {
         navigator.clipboard.writeText(link).then(() => {
-            setCopiedProductId(productId);
-            setTimeout(() => setCopiedProductId(null), 2000); // Reset after 2 seconds
+            setCopiedItemId(id);
+            setTimeout(() => setCopiedItemId(null), 2000); // Reset after 2 seconds
         }).catch(err => {
             console.error('Failed to copy text: ', err);
             alert('Failed to copy link.');
         });
     };
+
+    // Bank Konten Handlers
+    const handleOpenContentItemModal = (parentId: string | null, itemToEdit: ContentItem | null = null) => {
+        setParentCategoryId(parentId);
+        setContentItemToEdit(itemToEdit);
+        setIsContentItemModalOpen(true);
+    };
+
+    const handleCloseContentItemModal = () => {
+        setIsContentItemModalOpen(false);
+        setContentItemToEdit(null);
+        setParentCategoryId(null);
+    };
+
+    const handleSaveContentItem = (itemData: Omit<ContentItem, 'id'> | ContentItem) => {
+        if ('id' in itemData) { // Editing
+            setContentBankItems(prev => prev.map(item => item.id === itemData.id ? itemData : item));
+        } else { // Adding
+            const newItem: ContentItem = { ...itemData, id: crypto.randomUUID() };
+            setContentBankItems(prev => [...prev, newItem]);
+             // Auto-expand parent when adding a new item
+            if (newItem.parentId && !expandedCategories.includes(newItem.parentId)) {
+                setExpandedCategories(prev => [...prev, newItem.parentId!]);
+            }
+        }
+        handleCloseContentItemModal();
+    };
+    
+    const handleOpenDeleteContentItemModal = (item: ContentItem) => {
+        setContentItemToDelete(item);
+        setIsDeleteContentItemModalOpen(true);
+    };
+
+    const handleCloseDeleteContentItemModal = () => {
+        setContentItemToDelete(null);
+        setIsDeleteContentItemModalOpen(false);
+    };
+
+    const handleConfirmDeleteContentItem = () => {
+        if (!contentItemToDelete) return;
+        
+        let idsToDelete = new Set<string>([contentItemToDelete.id]);
+
+        if (contentItemToDelete.type === 'category') {
+            const findDescendants = (parentId: string) => {
+                const children = contentBankItems.filter(item => item.parentId === parentId);
+                for (const child of children) {
+                    idsToDelete.add(child.id);
+                    if (child.type === 'category') {
+                        findDescendants(child.id);
+                    }
+                }
+            };
+            findDescendants(contentItemToDelete.id);
+        }
+
+        setContentBankItems(prev => prev.filter(item => !idsToDelete.has(item.id)));
+        handleCloseDeleteContentItemModal();
+    };
+
+    const toggleCategoryExpansion = (categoryId: string) => {
+        setExpandedCategories(prev =>
+            prev.includes(categoryId)
+                ? prev.filter(id => id !== categoryId)
+                : [...prev, categoryId]
+        );
+    };
+
 
   const getTierColor = (tier: Affiliator['tier']) => {
     switch (tier) {
@@ -994,11 +1179,91 @@ const App: React.FC = () => {
     );
 };
 
+const BankKontenView = () => {
+    
+    // FIX: Explicitly type RenderContentItem as a React.FC to fix TypeScript error with the 'key' prop.
+    const RenderContentItem: React.FC<{ item: ContentItem, level: number }> = ({ item, level }) => {
+        const children = contentBankItems.filter(child => child.parentId === item.id);
+        const isExpanded = expandedCategories.includes(item.id);
+
+        return (
+            <>
+                <div className="group flex items-center gap-2 p-2 rounded-lg hover:bg-base-300/50" style={{ paddingLeft: `${level * 24 + 8}px` }}>
+                    {item.type === 'category' ? (
+                        <button onClick={() => toggleCategoryExpansion(item.id)} className="p-1 -ml-1">
+                            {/* FIX: Removed unnecessary 'key' prop. */}
+                            <ChevronRightIcon className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : 'rotate-0'}`} />
+                        </button>
+                    ) : (
+                         <div className="w-5 h-5"></div>
+                    )}
+
+                    <div className="flex items-center gap-2 flex-1">
+                        {item.type === 'category' ? <FolderIcon /> : <LinkIcon />}
+                        <span className="text-primary-content">{item.name}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {item.type === 'category' && (
+                            <button onClick={() => handleOpenContentItemModal(item.id)} className="text-slate-400 hover:text-primary p-1 rounded-full text-xs flex items-center gap-1 bg-base-300 px-2">
+                                Add
+                            </button>
+                        )}
+                        {item.type === 'link' && item.link && (
+                             <button
+                                onClick={() => handleCopyLink(item.link!, item.id)}
+                                className={`p-1 rounded-full ${copiedItemId === item.id ? 'text-green-400' : 'text-slate-500 hover:text-sky-400'}`}
+                                aria-label="Copy link"
+                                disabled={copiedItemId === item.id}
+                            >
+                                {copiedItemId === item.id ? <CheckIcon /> : <CopyIcon />}
+                            </button>
+                        )}
+                         <button onClick={() => handleOpenContentItemModal(item.parentId, item)} className="text-slate-500 hover:text-sky-400 p-1 rounded-full" aria-label={`Edit ${item.name}`}>
+                            <EditIcon />
+                        </button>
+                        <button onClick={() => handleOpenDeleteContentItemModal(item)} className="text-slate-500 hover:text-red-400 p-1 rounded-full" aria-label={`Delete ${item.name}`}>
+                            <TrashIcon />
+                        </button>
+                    </div>
+                </div>
+                {isExpanded && children.map(child => <RenderContentItem key={child.id} item={child} level={level + 1} />)}
+            </>
+        );
+    };
+
+    const topLevelItems = contentBankItems.filter(item => item.parentId === null);
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h1 className="text-3xl font-bold text-primary-content">Bank Konten</h1>
+              <button onClick={() => handleOpenContentItemModal(null)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary-focus text-primary-content font-semibold transition-colors">
+                  <PlusIcon />
+                  <span>Add Category</span>
+              </button>
+            </div>
+            <div className="bg-base-200 rounded-xl border border-base-300 p-4 space-y-1 min-h-[200px]">
+                {topLevelItems.length > 0 ? (
+                    topLevelItems.map(item => <RenderContentItem key={item.id} item={item} level={0} />)
+                ) : (
+                    <div className="text-center py-10 text-slate-400">
+                        <p>No content categories yet.</p>
+                        <p>Click "Add Category" to get started.</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 
   const renderView = () => {
     switch (view) {
       case View.Dashboard:
         return <DashboardView />;
+      case View.BankKonten:
+        return <BankKontenView />;
       case View.Affiliates:
         return (
             <div className="space-y-6">
@@ -1159,12 +1424,12 @@ const App: React.FC = () => {
                                                 <EditIcon />
                                             </button>
                                             <button 
-                                                onClick={() => handleCopyProductLink(p.link, p.id)}
-                                                className={`p-1 rounded-full transition-colors ${copiedProductId === p.id ? 'text-green-400' : 'text-slate-500 hover:text-sky-400 hover:bg-sky-500/10'}`}
+                                                onClick={() => handleCopyLink(p.link, p.id)}
+                                                className={`p-1 rounded-full transition-colors ${copiedItemId === p.id ? 'text-green-400' : 'text-slate-500 hover:text-sky-400 hover:bg-sky-500/10'}`}
                                                 aria-label={`Copy link for ${p.name}`}
-                                                disabled={copiedProductId === p.id}
+                                                disabled={copiedItemId === p.id}
                                             >
-                                                {copiedProductId === p.id ? <CheckIcon /> : <CopyIcon />}
+                                                {copiedItemId === p.id ? <CheckIcon /> : <CopyIcon />}
                                             </button>
                                              <button onClick={() => handleOpenDeleteProductModal(p)} className="text-slate-500 hover:text-red-400 p-1 rounded-full hover:bg-red-500/10" aria-label={`Delete product ${p.name}`}>
                                                 <TrashIcon />
@@ -1370,6 +1635,13 @@ const App: React.FC = () => {
       {isEditSampleModalOpen && <EditSampleModal onClose={handleCloseEditSampleModal} onSave={handleUpdateSample} sample={sampleToEdit} affiliates={affiliators} products={products} />}
       {isAddProductModalOpen && <AddProductModal onClose={() => setIsAddProductModalOpen(false)} onAdd={handleAddProduct} />}
       {isEditProductModalOpen && <EditProductModal onClose={handleCloseEditProductModal} onSave={handleUpdateProduct} product={productToEdit} />}
+      <AddEditContentItemModal
+          isOpen={isContentItemModalOpen}
+          onClose={handleCloseContentItemModal}
+          onSave={handleSaveContentItem}
+          itemToEdit={contentItemToEdit}
+          parentId={parentCategoryId}
+      />
       <ConfirmationModal
         isOpen={isDeleteAffiliateModalOpen}
         onClose={handleCloseDeleteAffiliateModal}
@@ -1398,6 +1670,17 @@ const App: React.FC = () => {
       >
         <p className="text-base-content">
           Yakin delete product <strong className="text-primary-content">{productToDelete?.name}</strong>?
+        </p>
+      </ConfirmationModal>
+      <ConfirmationModal
+        isOpen={isDeleteContentItemModalOpen}
+        onClose={handleCloseDeleteContentItemModal}
+        onConfirm={handleConfirmDeleteContentItem}
+        title={`Konfirmasi Hapus ${contentItemToDelete?.type}`}
+      >
+        <p className="text-base-content">
+          Yakin delete <strong className="text-primary-content">{contentItemToDelete?.name}</strong>?
+          {contentItemToDelete?.type === 'category' && " SEMUA sub-kategori dan link di dalamnya akan ikut terhapus."}
         </p>
       </ConfirmationModal>
       <WhatsappTemplateModal 
