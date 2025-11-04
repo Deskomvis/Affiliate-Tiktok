@@ -42,14 +42,14 @@ export const INITIAL_SAMPLES: Sample[] = [
     {
         id: 'sample-1',
         name: 'Andhika',
-        product_name: 'Serum Wajah Vitamin C',
+        productId: 'prod-1',
         request_date: '2025-10-15',
         status: 'Shipped',
     },
     {
         id: 'sample-2',
         name: 'Ayu Sari',
-        product_name: 'Matte Lipstick Shade "Ruby"',
+        productId: 'prod-2',
         request_date: '2025-10-20',
         status: 'Processing',
     },

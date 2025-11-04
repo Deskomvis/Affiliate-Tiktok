@@ -23,7 +23,7 @@ export interface Affiliator {
 export interface Sample {
   id: string;
   name: string;
-  product_name: string;
+  productId: string;
   request_date: string;
   status: 'Requested' | 'Processing' | 'Shipped' | 'Received';
   reminder_message?: string;
@@ -43,4 +43,5 @@ export interface ContentItem {
   type: ContentItemType;
   link?: string;
   parentId: string | null;
+  affiliateId?: string | null;
 }

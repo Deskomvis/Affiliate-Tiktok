@@ -1,8 +1,10 @@
 
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Affiliator, Sample, Product, ContentItem, ContentItemType } from './types';
 import { NAV_ITEMS, INITIAL_AFFILIATORS, INITIAL_SAMPLES, INITIAL_PRODUCTS, BROADCAST_TEMPLATES, TemplateCategory, INITIAL_CONTENT_BANK_ITEMS } from './constants';
-import { PlusIcon, TrashIcon, XIcon, WhatsappIcon, LinkIcon, CopyIcon, CheckIcon, EditIcon, SparklesIcon, FolderIcon, ChevronRightIcon, FolderPlusIcon, FilePlusIcon } from './components/Icons';
+import { PlusIcon, TrashIcon, XIcon, WhatsappIcon, LinkIcon, CopyIcon, CheckIcon, EditIcon, SparklesIcon, FolderIcon, ChevronRightIcon, FolderPlusIcon, FilePlusIcon, UsersIcon } from './components/Icons';
 
 // Custom hook for localStorage persistence
 const usePersistentState = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -250,7 +252,7 @@ const EditAffiliateModal = ({ onClose, onSave, affiliate, products }: { onClose:
 
 const AddSampleModal = ({ onClose, onAdd, affiliates, products }: { onClose: () => void; onAdd: (sample: Omit<Sample, 'id'>) => void; affiliates: Affiliator[], products: Product[] }) => {
     const [affiliateId, setAffiliateId] = useState<string>(affiliates[0]?.id || '');
-    const [productName, setProductName] = useState('');
+    const [productId, setProductId] = useState('');
     const [requestDate, setRequestDate] = useState(getCurrentDate());
     const [status, setStatus] = useState<Sample['status']>('Requested');
 
@@ -263,12 +265,12 @@ const AddSampleModal = ({ onClose, onAdd, affiliates, products }: { onClose: () 
 
     useEffect(() => {
         // Reset product selection when available products change
-        setProductName(availableProducts[0]?.name || '');
+        setProductId(availableProducts[0]?.id || '');
     }, [availableProducts]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!affiliateId || !requestDate || !productName) {
+        if (!affiliateId || !requestDate || !productId) {
             alert('Please fill all fields');
             return;
         }
@@ -281,7 +283,7 @@ const AddSampleModal = ({ onClose, onAdd, affiliates, products }: { onClose: () 
 
         const newSample: Omit<Sample, 'id'> = {
             name: affiliateName,
-            product_name: productName,
+            productId: productId,
             request_date: requestDate,
             status,
         };
@@ -309,10 +311,10 @@ const AddSampleModal = ({ onClose, onAdd, affiliates, products }: { onClose: () 
                     </div>
                     <div>
                         <label htmlFor="productName" className="block text-sm font-medium text-slate-400 mb-1">Product Name</label>
-                        <select id="productName" value={productName} onChange={e => setProductName(e.target.value)} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none appearance-none" disabled={availableProducts.length === 0}>
+                        <select id="productName" value={productId} onChange={e => setProductId(e.target.value)} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none appearance-none" disabled={availableProducts.length === 0}>
                            {availableProducts.length > 0 ? (
                                 availableProducts.map(p => (
-                                    <option key={p.id} value={p.name}>{p.name}</option>
+                                    <option key={p.id} value={p.id}>{p.name}</option>
                                 ))
                             ) : (
                                 <option value="" disabled>No linked products for this affiliate</option>
@@ -344,7 +346,7 @@ const AddSampleModal = ({ onClose, onAdd, affiliates, products }: { onClose: () 
 
 const EditSampleModal = ({ onClose, onSave, sample, affiliates, products }: { onClose: () => void; onSave: (sample: Sample) => void; sample: Sample | null, affiliates: Affiliator[], products: Product[] }) => {
     const [affiliateName, setAffiliateName] = useState('');
-    const [productName, setProductName] = useState('');
+    const [productId, setProductId] = useState('');
     const [requestDate, setRequestDate] = useState('');
     const [status, setStatus] = useState<Sample['status']>('Requested');
 
@@ -358,7 +360,7 @@ const EditSampleModal = ({ onClose, onSave, sample, affiliates, products }: { on
     useEffect(() => {
         if (sample) {
             setAffiliateName(sample.name);
-            setProductName(sample.product_name);
+            setProductId(sample.productId);
             setRequestDate(sample.request_date);
             setStatus(sample.status);
         }
@@ -368,7 +370,7 @@ const EditSampleModal = ({ onClose, onSave, sample, affiliates, products }: { on
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!affiliateName || !productName || !requestDate) {
+        if (!affiliateName || !productId || !requestDate) {
             alert('Please fill all fields');
             return;
         }
@@ -376,7 +378,7 @@ const EditSampleModal = ({ onClose, onSave, sample, affiliates, products }: { on
         const updatedSample: Sample = {
             ...sample,
             name: affiliateName,
-            product_name: productName,
+            productId: productId,
             request_date: requestDate,
             status,
         };
@@ -404,9 +406,9 @@ const EditSampleModal = ({ onClose, onSave, sample, affiliates, products }: { on
                     </div>
                      <div>
                         <label htmlFor="edit-sample-productName" className="block text-sm font-medium text-slate-400 mb-1">Product Name</label>
-                         <select id="edit-sample-productName" value={productName} onChange={e => setProductName(e.target.value)} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none appearance-none">
+                         <select id="edit-sample-productName" value={productId} onChange={e => setProductId(e.target.value)} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none appearance-none">
                             {availableProducts.map(p => (
-                                <option key={p.id} value={p.name}>{p.name}</option>
+                                <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
                         </select>
                     </div>
@@ -730,7 +732,7 @@ const BroadcastTemplateModal = ({ onClose, onSelect }: { onClose: () => void; on
     );
 };
 
-const AddEditContentItemModal = ({ isOpen, onClose, onSave, itemToEdit, parentId }: { isOpen: boolean; onClose: () => void; onSave: (item: Omit<ContentItem, 'id'> | ContentItem) => void; itemToEdit: ContentItem | null; parentId: string | null; }) => {
+const AddEditContentItemModal = ({ isOpen, onClose, onSave, itemToEdit }: { isOpen: boolean; onClose: () => void; onSave: (item: Omit<ContentItem, 'id' | 'affiliateId' | 'parentId'> | ContentItem) => void; itemToEdit: ContentItem | null; }) => {
     const [name, setName] = useState('');
     const [type, setType] = useState<ContentItemType>('category');
     const [link, setLink] = useState('');
@@ -776,13 +778,14 @@ const AddEditContentItemModal = ({ isOpen, onClose, onSave, itemToEdit, parentId
                 name,
                 type,
                 link: type === 'link' ? link : undefined,
-            });
+            } as ContentItem);
         } else {
+            // FIX: Removed incorrect `parentId` and invalid type assertion.
+            // The parent component (`App`) is responsible for adding `parentId` from its state.
             onSave({
                 name,
                 type,
                 link: type === 'link' ? link : undefined,
-                parentId: parentId,
             });
         }
     };
@@ -882,7 +885,9 @@ const App: React.FC = () => {
   const [isContentItemModalOpen, setIsContentItemModalOpen] = useState(false);
   const [contentItemToEdit, setContentItemToEdit] = useState<ContentItem | null>(null);
   const [parentCategoryId, setParentCategoryId] = useState<string | null>(null);
+  const [currentAffiliateId, setCurrentAffiliateId] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [expandedAffiliates, setExpandedAffiliates] = useState<string[]>([]);
 
 
   // Data State
@@ -1035,9 +1040,10 @@ const App: React.FC = () => {
     };
 
     // Bank Konten Handlers
-    const handleOpenContentItemModal = (parentId: string | null, itemToEdit: ContentItem | null = null) => {
+    const handleOpenContentItemModal = (parentId: string | null, itemToEdit: ContentItem | null = null, affiliateId: string | null = null) => {
         setParentCategoryId(parentId);
         setContentItemToEdit(itemToEdit);
+        setCurrentAffiliateId(affiliateId);
         setIsContentItemModalOpen(true);
     };
 
@@ -1045,13 +1051,14 @@ const App: React.FC = () => {
         setIsContentItemModalOpen(false);
         setContentItemToEdit(null);
         setParentCategoryId(null);
+        setCurrentAffiliateId(null);
     };
 
-    const handleSaveContentItem = (itemData: Omit<ContentItem, 'id'> | ContentItem) => {
+    const handleSaveContentItem = (itemData: Omit<ContentItem, 'id' | 'parentId' | 'affiliateId'> | ContentItem) => {
         if ('id' in itemData) { // Editing
-            setContentBankItems(prev => prev.map(item => item.id === itemData.id ? itemData : item));
+            setContentBankItems(prev => prev.map(item => item.id === itemData.id ? {...item, ...itemData} : item));
         } else { // Adding
-            const newItem: ContentItem = { ...itemData, id: crypto.randomUUID() };
+            const newItem: ContentItem = { ...itemData, id: crypto.randomUUID(), parentId: parentCategoryId, affiliateId: currentAffiliateId };
             setContentBankItems(prev => [...prev, newItem]);
              // Auto-expand parent when adding a new item
             if (newItem.parentId && !expandedCategories.includes(newItem.parentId)) {
@@ -1098,6 +1105,14 @@ const App: React.FC = () => {
             prev.includes(categoryId)
                 ? prev.filter(id => id !== categoryId)
                 : [...prev, categoryId]
+        );
+    };
+    
+    const toggleAffiliateExpansion = (affiliateId: string) => {
+        setExpandedAffiliates(prev =>
+            prev.includes(affiliateId)
+                ? prev.filter(id => id !== affiliateId)
+                : [...prev, affiliateId]
         );
     };
 
@@ -1181,7 +1196,6 @@ const App: React.FC = () => {
 
 const BankKontenView = () => {
     
-    // FIX: Explicitly type RenderContentItem as a React.FC to fix TypeScript error with the 'key' prop.
     const RenderContentItem: React.FC<{ item: ContentItem, level: number }> = ({ item, level }) => {
         const children = contentBankItems.filter(child => child.parentId === item.id);
         const isExpanded = expandedCategories.includes(item.id);
@@ -1191,7 +1205,6 @@ const BankKontenView = () => {
                 <div className="group flex items-center gap-2 p-2 rounded-lg hover:bg-base-300/50" style={{ paddingLeft: `${level * 24 + 8}px` }}>
                     {item.type === 'category' ? (
                         <button onClick={() => toggleCategoryExpansion(item.id)} className="p-1 -ml-1">
-                            {/* FIX: Removed unnecessary 'key' prop. */}
                             <ChevronRightIcon className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : 'rotate-0'}`} />
                         </button>
                     ) : (
@@ -1205,7 +1218,7 @@ const BankKontenView = () => {
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {item.type === 'category' && (
-                            <button onClick={() => handleOpenContentItemModal(item.id)} className="text-slate-400 hover:text-primary p-1 rounded-full text-xs flex items-center gap-1 bg-base-300 px-2">
+                            <button onClick={() => handleOpenContentItemModal(item.id, null, item.affiliateId)} className="text-slate-400 hover:text-primary p-1 rounded-full text-xs flex items-center gap-1 bg-base-300 px-2">
                                 Add
                             </button>
                         )}
@@ -1219,7 +1232,7 @@ const BankKontenView = () => {
                                 {copiedItemId === item.id ? <CheckIcon /> : <CopyIcon />}
                             </button>
                         )}
-                         <button onClick={() => handleOpenContentItemModal(item.parentId, item)} className="text-slate-500 hover:text-sky-400 p-1 rounded-full" aria-label={`Edit ${item.name}`}>
+                         <button onClick={() => handleOpenContentItemModal(item.parentId, item, item.affiliateId)} className="text-slate-500 hover:text-sky-400 p-1 rounded-full" aria-label={`Edit ${item.name}`}>
                             <EditIcon />
                         </button>
                         <button onClick={() => handleOpenDeleteContentItemModal(item)} className="text-slate-500 hover:text-red-400 p-1 rounded-full" aria-label={`Delete ${item.name}`}>
@@ -1232,26 +1245,74 @@ const BankKontenView = () => {
         );
     };
 
-    const topLevelItems = contentBankItems.filter(item => item.parentId === null);
+    const internalTopLevelItems = contentBankItems.filter(item => item.parentId === null && !item.affiliateId);
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h1 className="text-3xl font-bold text-primary-content">Bank Konten</h1>
-              <button onClick={() => handleOpenContentItemModal(null)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary-focus text-primary-content font-semibold transition-colors">
-                  <PlusIcon />
-                  <span>Add Category</span>
-              </button>
+            <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h1 className="text-3xl font-bold text-primary-content">Bank Konten Internal</h1>
+                  <button onClick={() => handleOpenContentItemModal(null, null, null)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary-focus text-primary-content font-semibold transition-colors">
+                      <PlusIcon />
+                      <span>Add Category</span>
+                  </button>
+                </div>
+                <div className="bg-base-200 rounded-xl border border-base-300 p-4 space-y-1 min-h-[200px]">
+                    {internalTopLevelItems.length > 0 ? (
+                        internalTopLevelItems.map(item => <RenderContentItem key={item.id} item={item} level={0} />)
+                    ) : (
+                        <div className="text-center py-10 text-slate-400">
+                            <p>No internal content categories yet.</p>
+                            <p>Click "Add Category" to get started.</p>
+                        </div>
+                    )}
+                </div>
             </div>
-            <div className="bg-base-200 rounded-xl border border-base-300 p-4 space-y-1 min-h-[200px]">
-                {topLevelItems.length > 0 ? (
-                    topLevelItems.map(item => <RenderContentItem key={item.id} item={item} level={0} />)
-                ) : (
-                    <div className="text-center py-10 text-slate-400">
-                        <p>No content categories yet.</p>
-                        <p>Click "Add Category" to get started.</p>
-                    </div>
-                )}
+
+            <hr className="border-t-2 border-base-300 my-8" />
+
+            <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h1 className="text-3xl font-bold text-primary-content">Bank Konten Affiliates</h1>
+                </div>
+                <div className="bg-base-200 rounded-xl border border-base-300 p-4 space-y-2">
+                    {affiliators.length > 0 ? (
+                        affiliators.map(affiliate => {
+                            const affiliateTopLevelContent = contentBankItems.filter(item => item.parentId === null && item.affiliateId === affiliate.id);
+                            const isExpanded = expandedAffiliates.includes(affiliate.id);
+
+                            return (
+                                <div key={affiliate.id} className="border-b border-base-300 last:border-b-0 py-1">
+                                    <div className="group flex items-center gap-2 p-2 rounded-lg hover:bg-base-300/50">
+                                        <button onClick={() => toggleAffiliateExpansion(affiliate.id)} className="p-1">
+                                            <ChevronRightIcon className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : 'rotate-0'}`} />
+                                        </button>
+                                        <UsersIcon />
+                                        <span className="text-primary-content font-semibold flex-1">{affiliate.name}</span>
+                                        <button onClick={() => handleOpenContentItemModal(null, null, affiliate.id)} className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-base-300 hover:bg-primary/20 text-secondary font-semibold transition-colors opacity-0 group-hover:opacity-100">
+                                            <FolderPlusIcon />
+                                            <span>Add Category</span>
+                                        </button>
+                                    </div>
+                                    {isExpanded && (
+                                        <div className="pl-6 pt-2">
+                                            {affiliateTopLevelContent.length > 0 ? (
+                                                affiliateTopLevelContent.map(item => <RenderContentItem key={item.id} item={item} level={1} />)
+                                            ) : (
+                                                <p className="text-slate-400 text-sm p-2 pl-8">No content for this affiliate yet. Click 'Add Category' to start.</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })
+                    ) : (
+                        <div className="text-center py-10 text-slate-400">
+                            <p>No affiliates available to assign content to.</p>
+                            <p>Add an affiliate in the 'Affiliates' tab first.</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -1346,10 +1407,12 @@ const BankKontenView = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {samples.map(s => (
+                                {samples.map(s => {
+                                    const product = products.find(p => p.id === s.productId);
+                                    return (
                                     <tr key={s.id} className="border-b border-base-300 last:border-b-0 hover:bg-base-300/50 transition-colors">
                                         <td className="p-4 font-medium text-primary-content">{s.name}</td>
-                                        <td className="p-4">{s.product_name}</td>
+                                        <td className="p-4">{product?.name || 'Product Not Found'}</td>
                                         <td className="p-4">{s.request_date}</td>
                                         <td className="p-4">
                                             <select 
@@ -1375,7 +1438,8 @@ const BankKontenView = () => {
                                             </button>
                                         </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
                                  {samples.length === 0 && (
                                     <tr>
                                         <td colSpan={5} className="text-center p-8 text-slate-400">No sample requests yet.</td>
@@ -1640,7 +1704,6 @@ const BankKontenView = () => {
           onClose={handleCloseContentItemModal}
           onSave={handleSaveContentItem}
           itemToEdit={contentItemToEdit}
-          parentId={parentCategoryId}
       />
       <ConfirmationModal
         isOpen={isDeleteAffiliateModalOpen}
@@ -1659,7 +1722,7 @@ const BankKontenView = () => {
         title="Konfirmasi Hapus Sample"
       >
         <p className="text-base-content">
-          Yakin delete sample <strong className="text-primary-content">{sampleToDelete?.product_name}</strong> untuk <strong className="text-primary-content">{sampleToDelete?.name}</strong>?
+          Yakin delete sample <strong className="text-primary-content">{products.find(p => p.id === sampleToDelete?.productId)?.name}</strong> untuk <strong className="text-primary-content">{sampleToDelete?.name}</strong>?
         </p>
       </ConfirmationModal>
        <ConfirmationModal
