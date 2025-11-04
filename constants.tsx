@@ -21,6 +21,7 @@ export const INITIAL_AFFILIATORS: Affiliator[] = [
         whatsapp: '+6281227032108',
         tier: 'Micro',
         last_activity: '2025-10-28',
+        productIds: ['prod-1'],
     },
     {
         id: 'aff-2',
@@ -31,6 +32,7 @@ export const INITIAL_AFFILIATORS: Affiliator[] = [
         whatsapp: '+6281234567890',
         tier: 'Mid',
         last_activity: '2025-10-25',
+        productIds: ['prod-1', 'prod-2'],
     }
 ];
 

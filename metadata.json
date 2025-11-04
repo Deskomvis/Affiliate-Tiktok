@@ -1,5 +1,5 @@
 {
-  "name": "Affiliate Management AI Assistant",
-  "description": "An intelligent dashboard to help businesses collect, organize, and manage data about their affiliators, powered by AI for streamlined communication and task automation.",
+  "name": "Affiliate Manager",
+  "description": "An intelligent dashboard to help businesses collect, organize, and manage data about their affiliators.",
   "requestFramePermissions": []
 }

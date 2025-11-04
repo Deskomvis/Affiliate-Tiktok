@@ -43,12 +43,19 @@ const getCurrentDate = () => {
     return `${year}-${month}-${day}`;
 };
 
-const AddAffiliateModal = ({ onClose, onAdd }: { onClose: () => void; onAdd: (affiliator: Omit<Affiliator, 'id'>) => void; }) => {
+const AddAffiliateModal = ({ onClose, onAdd, products }: { onClose: () => void; onAdd: (affiliator: Omit<Affiliator, 'id'>) => void; products: Product[] }) => {
     const [name, setName] = useState('');
     const [tiktok, setTiktok] = useState('');
     const [followers, setFollowers] = useState(0);
     const [niche, setNiche] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
+    const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+
+    const handleProductToggle = (productId: string) => {
+        setSelectedProductIds(prev =>
+            prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
+        );
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -70,6 +77,7 @@ const AddAffiliateModal = ({ onClose, onAdd }: { onClose: () => void; onAdd: (af
             whatsapp: formattedWhatsapp,
             tier: calculateTier(followers),
             last_activity: getCurrentDate(),
+            productIds: selectedProductIds,
         };
 
         onAdd(newAffiliator);
@@ -105,6 +113,22 @@ const AddAffiliateModal = ({ onClose, onAdd }: { onClose: () => void; onAdd: (af
                         <label htmlFor="whatsapp" className="block text-sm font-medium text-slate-400 mb-1">WhatsApp</label>
                         <input id="whatsapp" type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="08..." required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-2">Linked Products</label>
+                        <div className="space-y-2 max-h-32 overflow-y-auto bg-base-300 p-3 rounded-lg">
+                             {products.length > 0 ? products.map(product => (
+                                <label key={product.id} className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedProductIds.includes(product.id)}
+                                        onChange={() => handleProductToggle(product.id)}
+                                        className="h-4 w-4 rounded bg-base-100 border-slate-500 text-primary focus:ring-primary"
+                                    />
+                                    <span className="text-primary-content">{product.name}</span>
+                                </label>
+                            )) : <p className="text-slate-400 text-sm">No products available. Add products first.</p>}
+                        </div>
+                    </div>
                     <div className="pt-4 flex justify-end gap-3">
                         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-base-300 hover:bg-base-300/80 text-primary-content font-semibold">Cancel</button>
                         <button type="submit" className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-focus text-primary-content font-semibold">Save Affiliate</button>
@@ -115,12 +139,13 @@ const AddAffiliateModal = ({ onClose, onAdd }: { onClose: () => void; onAdd: (af
     );
 };
 
-const EditAffiliateModal = ({ onClose, onSave, affiliate }: { onClose: () => void; onSave: (affiliator: Affiliator) => void; affiliate: Affiliator | null }) => {
+const EditAffiliateModal = ({ onClose, onSave, affiliate, products }: { onClose: () => void; onSave: (affiliator: Affiliator) => void; affiliate: Affiliator | null; products: Product[] }) => {
     const [name, setName] = useState('');
     const [tiktok, setTiktok] = useState('');
     const [followers, setFollowers] = useState(0);
     const [niche, setNiche] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
+    const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
     useEffect(() => {
         if (affiliate) {
@@ -129,10 +154,17 @@ const EditAffiliateModal = ({ onClose, onSave, affiliate }: { onClose: () => voi
             setFollowers(affiliate.followers);
             setNiche(affiliate.niche);
             setWhatsapp(affiliate.whatsapp);
+            setSelectedProductIds(affiliate.productIds || []);
         }
     }, [affiliate]);
 
     if (!affiliate) return null;
+
+    const handleProductToggle = (productId: string) => {
+        setSelectedProductIds(prev =>
+            prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
+        );
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -154,6 +186,7 @@ const EditAffiliateModal = ({ onClose, onSave, affiliate }: { onClose: () => voi
             niche,
             whatsapp: formattedWhatsapp,
             tier: calculateTier(followers),
+            productIds: selectedProductIds,
         };
 
         onSave(updatedAffiliator);
@@ -189,6 +222,22 @@ const EditAffiliateModal = ({ onClose, onSave, affiliate }: { onClose: () => voi
                         <label htmlFor="edit-whatsapp" className="block text-sm font-medium text-slate-400 mb-1">WhatsApp</label>
                         <input id="edit-whatsapp" type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="08..." required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
                     </div>
+                     <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-2">Linked Products</label>
+                        <div className="space-y-2 max-h-32 overflow-y-auto bg-base-300 p-3 rounded-lg">
+                            {products.map(product => (
+                                <label key={product.id} className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedProductIds.includes(product.id)}
+                                        onChange={() => handleProductToggle(product.id)}
+                                        className="h-4 w-4 rounded bg-base-100 border-slate-500 text-primary focus:ring-primary"
+                                    />
+                                    <span className="text-primary-content">{product.name}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
                     <div className="pt-4 flex justify-end gap-3">
                         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-base-300 hover:bg-base-300/80 text-primary-content font-semibold">Cancel</button>
                         <button type="submit" className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-focus text-primary-content font-semibold">Save Changes</button>
@@ -201,9 +250,21 @@ const EditAffiliateModal = ({ onClose, onSave, affiliate }: { onClose: () => voi
 
 const AddSampleModal = ({ onClose, onAdd, affiliates, products }: { onClose: () => void; onAdd: (sample: Omit<Sample, 'id'>) => void; affiliates: Affiliator[], products: Product[] }) => {
     const [affiliateId, setAffiliateId] = useState<string>(affiliates[0]?.id || '');
-    const [productName, setProductName] = useState(products[0]?.name || '');
+    const [productName, setProductName] = useState('');
     const [requestDate, setRequestDate] = useState(getCurrentDate());
     const [status, setStatus] = useState<Sample['status']>('Requested');
+
+    const availableProducts = useMemo(() => {
+        if (!affiliateId) return [];
+        const selectedAffiliate = affiliates.find(a => a.id === affiliateId);
+        if (!selectedAffiliate || !selectedAffiliate.productIds) return products; // Fallback to all products if none linked
+        return products.filter(p => selectedAffiliate.productIds.includes(p.id));
+    }, [affiliateId, affiliates, products]);
+
+    useEffect(() => {
+        // Reset product selection when available products change
+        setProductName(availableProducts[0]?.name || '');
+    }, [availableProducts]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -248,10 +309,14 @@ const AddSampleModal = ({ onClose, onAdd, affiliates, products }: { onClose: () 
                     </div>
                     <div>
                         <label htmlFor="productName" className="block text-sm font-medium text-slate-400 mb-1">Product Name</label>
-                        <select id="productName" value={productName} onChange={e => setProductName(e.target.value)} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none appearance-none">
-                            {products.map(p => (
-                                <option key={p.id} value={p.name}>{p.name}</option>
-                            ))}
+                        <select id="productName" value={productName} onChange={e => setProductName(e.target.value)} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none appearance-none" disabled={availableProducts.length === 0}>
+                           {availableProducts.length > 0 ? (
+                                availableProducts.map(p => (
+                                    <option key={p.id} value={p.name}>{p.name}</option>
+                                ))
+                            ) : (
+                                <option value="" disabled>No linked products for this affiliate</option>
+                            )}
                         </select>
                     </div>
                     <div>
@@ -282,6 +347,13 @@ const EditSampleModal = ({ onClose, onSave, sample, affiliates, products }: { on
     const [productName, setProductName] = useState('');
     const [requestDate, setRequestDate] = useState('');
     const [status, setStatus] = useState<Sample['status']>('Requested');
+
+     const availableProducts = useMemo(() => {
+        if (!affiliateName) return products;
+        const selectedAffiliate = affiliates.find(a => a.name === affiliateName);
+        if (!selectedAffiliate || !selectedAffiliate.productIds || selectedAffiliate.productIds.length === 0) return products;
+        return products.filter(p => selectedAffiliate.productIds.includes(p.id));
+    }, [affiliateName, affiliates, products]);
 
     useEffect(() => {
         if (sample) {
@@ -333,7 +405,7 @@ const EditSampleModal = ({ onClose, onSave, sample, affiliates, products }: { on
                      <div>
                         <label htmlFor="edit-sample-productName" className="block text-sm font-medium text-slate-400 mb-1">Product Name</label>
                          <select id="edit-sample-productName" value={productName} onChange={e => setProductName(e.target.value)} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none appearance-none">
-                            {products.map(p => (
+                            {availableProducts.map(p => (
                                 <option key={p.id} value={p.name}>{p.name}</option>
                             ))}
                         </select>
@@ -404,6 +476,69 @@ const AddProductModal = ({ onClose, onAdd }: { onClose: () => void; onAdd: (prod
                     <div className="pt-4 flex justify-end gap-3">
                         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-base-300 hover:bg-base-300/80 text-primary-content font-semibold">Cancel</button>
                         <button type="submit" className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-focus text-primary-content font-semibold">Save Product</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const EditProductModal = ({ onClose, onSave, product }: { onClose: () => void; onSave: (product: Product) => void; product: Product | null }) => {
+    const [name, setName] = useState('');
+    const [link, setLink] = useState('');
+
+    useEffect(() => {
+        if (product) {
+            setName(product.name);
+            setLink(product.link);
+        }
+    }, [product]);
+
+    if (!product) return null;
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name || !link) {
+            alert('Please fill all fields');
+            return;
+        }
+        try {
+            new URL(link);
+        } catch (_) {
+            alert('Please enter a valid URL for the product link.');
+            return;
+        }
+
+        const updatedProduct: Product = {
+            ...product,
+            name,
+            link,
+        };
+
+        onSave(updatedProduct);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+            <div className="bg-base-200 rounded-2xl shadow-xl w-full max-w-md border border-base-300 animate-fade-in-up">
+                <div className="p-6 flex justify-between items-center border-b border-base-300">
+                    <h2 className="text-xl font-bold text-primary-content">Edit Product</h2>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-base-300 text-slate-400" aria-label="Close modal">
+                        <XIcon />
+                    </button>
+                </div>
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div>
+                        <label htmlFor="edit-productName" className="block text-sm font-medium text-slate-400 mb-1">Product Name</label>
+                        <input id="edit-productName" type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
+                    </div>
+                    <div>
+                        <label htmlFor="edit-productLink" className="block text-sm font-medium text-slate-400 mb-1">Product Link</label>
+                        <input id="edit-productLink" type="url" value={link} onChange={e => setLink(e.target.value)} placeholder="https://..." required className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none" />
+                    </div>
+                    <div className="pt-4 flex justify-end gap-3">
+                        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-base-300 hover:bg-base-300/80 text-primary-content font-semibold">Cancel</button>
+                        <button type="submit" className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-focus text-primary-content font-semibold">Save Changes</button>
                     </div>
                 </form>
             </div>
@@ -597,7 +732,7 @@ const BroadcastTemplateModal = ({ onClose, onSelect }: { onClose: () => void; on
 
 
 const App: React.FC = () => {
-  const [view, setView] = useState<View>(View.Products);
+  const [view, setView] = useState<View>(View.Affiliates);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [affiliateToEdit, setAffiliateToEdit] = useState<Affiliator | null>(null);
@@ -605,6 +740,8 @@ const App: React.FC = () => {
   const [isEditSampleModalOpen, setIsEditSampleModalOpen] = useState(false);
   const [sampleToEdit, setSampleToEdit] = useState<Sample | null>(null);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   
   // Delete Modals State
   const [isDeleteAffiliateModalOpen, setIsDeleteAffiliateModalOpen] = useState(false);
@@ -627,6 +764,7 @@ const App: React.FC = () => {
   const [hideSent, setHideSent] = useState(false);
   const [isBroadcastTemplateModalOpen, setIsBroadcastTemplateModalOpen] = useState(false);
   const [selectedBroadcastProduct, setSelectedBroadcastProduct] = useState<string>('');
+  const [broadcastProductFilter, setBroadcastProductFilter] = useState<string>('');
 
   // Product state
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
@@ -661,6 +799,11 @@ const App: React.FC = () => {
     setProducts(prev => [...prev, { ...newProduct, id: crypto.randomUUID() }]);
     setIsAddProductModalOpen(false);
   };
+
+  const handleUpdateProduct = (updatedProduct: Product) => {
+    setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    handleCloseEditProductModal();
+  };
   
   const handleOpenEditModal = (affiliate: Affiliator) => {
     setAffiliateToEdit(affiliate);
@@ -680,6 +823,16 @@ const App: React.FC = () => {
   const handleCloseEditSampleModal = () => {
     setSampleToEdit(null);
     setIsEditSampleModalOpen(false);
+  };
+
+  const handleOpenEditProductModal = (product: Product) => {
+    setProductToEdit(product);
+    setIsEditProductModalOpen(true);
+  };
+
+  const handleCloseEditProductModal = () => {
+    setProductToEdit(null);
+    setIsEditProductModalOpen(false);
   };
 
   const handleOpenDeleteAffiliateModal = (affiliate: Affiliator) => {
@@ -798,7 +951,7 @@ const App: React.FC = () => {
             <h1 className="text-3xl font-bold text-primary-content">Dashboard</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="bg-base-200 p-6 rounded-xl border border-base-300">
-                    <h2 className="text-xl font-semibold mb-4 text-secondary">Total Affiliators</h2>
+                    <h2 className="text-xl font-semibold mb-4 text-secondary">Total Affiliates</h2>
                     <p className="text-5xl font-bold text-primary-content">{affiliators.length}</p>
                 </div>
                  <div className="bg-base-200 p-6 rounded-xl border border-base-300">
@@ -861,23 +1014,33 @@ const App: React.FC = () => {
                         <thead className="border-b border-base-300">
                             <tr>
                                 <th className="p-4">Name</th>
-                                <th className="p-4">TikTok</th>
                                 <th className="p-4">Followers</th>
                                 <th className="p-4">Niche</th>
                                 <th className="p-4">Tier</th>
-                                <th className="p-4">Nomer Whatsapp</th>
+                                <th className="p-4">Linked Products</th>
                                 <th className="p-4">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {affiliators.map(a => (
                                 <tr key={a.id} className="border-b border-base-300 last:border-b-0 hover:bg-base-300/50 transition-colors">
-                                    <td className="p-4 font-medium text-primary-content">{a.name}</td>
-                                    <td className="p-4 text-secondary">{a.tiktok_account}</td>
+                                    <td className="p-4">
+                                        <p className="font-medium text-primary-content">{a.name}</p>
+                                        <a href={`https://wa.me/${a.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-xs text-secondary hover:underline">{a.tiktok_account}</a>
+                                    </td>
                                     <td className="p-4">{a.followers.toLocaleString()}</td>
                                     <td className="p-4">{a.niche}</td>
                                     <td className="p-4"><span className={`px-2 py-1 text-xs rounded-full border ${getTierColor(a.tier)}`}>{a.tier}</span></td>
-                                    <td className="p-4">{a.whatsapp}</td>
+                                    <td className="p-4">
+                                        <div className="flex flex-wrap gap-1">
+                                            {a.productIds && a.productIds.map(pid => {
+                                                const product = products.find(p => p.id === pid);
+                                                return product ? (
+                                                    <span key={pid} className="text-xs bg-base-300 text-slate-300 px-2 py-1 rounded-full">{product.name}</span>
+                                                ) : null;
+                                            })}
+                                        </div>
+                                    </td>
                                     <td className="p-4 flex items-center gap-2">
                                         <button onClick={() => handleOpenEditModal(a)} className="text-slate-500 hover:text-sky-400 p-1 rounded-full hover:bg-sky-500/10" aria-label={`Edit ${a.name}`}>
                                             <EditIcon />
@@ -989,6 +1152,13 @@ const App: React.FC = () => {
                                         </td>
                                         <td className="p-4 flex items-center gap-2">
                                             <button 
+                                                onClick={() => handleOpenEditProductModal(p)}
+                                                className="text-slate-500 hover:text-sky-400 p-1 rounded-full hover:bg-sky-500/10"
+                                                aria-label={`Edit ${p.name}`}
+                                            >
+                                                <EditIcon />
+                                            </button>
+                                            <button 
                                                 onClick={() => handleCopyProductLink(p.link, p.id)}
                                                 className={`p-1 rounded-full transition-colors ${copiedProductId === p.id ? 'text-green-400' : 'text-slate-500 hover:text-sky-400 hover:bg-sky-500/10'}`}
                                                 aria-label={`Copy link for ${p.name}`}
@@ -1019,7 +1189,9 @@ const App: React.FC = () => {
                 );
             };
 
-            const filteredAffiliates = affiliators.filter(a => a.name.toLowerCase().includes(broadcastSearch.toLowerCase()));
+            const filteredAffiliates = affiliators
+                .filter(a => a.name.toLowerCase().includes(broadcastSearch.toLowerCase()))
+                .filter(a => broadcastProductFilter === '' || (a.productIds && a.productIds.includes(broadcastProductFilter)));
 
             const handleSelectAll = () => {
                  const availableAffiliates = filteredAffiliates.filter(a => !sentAffiliateIds.includes(a.id)).map(a => a.id);
@@ -1059,6 +1231,7 @@ const App: React.FC = () => {
             };
             
             const affiliatesToDisplay = filteredAffiliates.filter(a => !(hideSent && sentAffiliateIds.includes(a.id)));
+            const totalAvailableCount = filteredAffiliates.filter(a => !sentAffiliateIds.includes(a.id)).length;
 
             return (
                 <div className="space-y-6">
@@ -1067,6 +1240,7 @@ const App: React.FC = () => {
                         {/* Left Column: Affiliate Selection */}
                         <div className="bg-base-200 rounded-xl border border-base-300 flex flex-col">
                            <div className="p-4 border-b border-base-300 space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
                                 <input 
                                     type="text"
                                     placeholder="Search affiliate..."
@@ -1074,13 +1248,22 @@ const App: React.FC = () => {
                                     onChange={e => setBroadcastSearch(e.target.value)}
                                     className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none"
                                 />
+                                <select
+                                    value={broadcastProductFilter}
+                                    onChange={e => setBroadcastProductFilter(e.target.value)}
+                                    className="w-full bg-base-300 text-primary-content rounded-lg p-3 border-2 border-transparent focus:border-primary focus:outline-none appearance-none"
+                                >
+                                    <option value="">Filter by Product</option>
+                                    {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                                </div>
                                 <div className="flex items-center justify-between text-sm">
                                      <div className="flex items-center gap-2">
                                         <input 
                                             type="checkbox"
                                             id="selectAll"
                                             className="h-4 w-4 rounded bg-base-300 border-slate-500 text-primary focus:ring-primary"
-                                            checked={filteredAffiliates.filter(a => !sentAffiliateIds.includes(a.id)).length > 0 && selectedAffiliates.length === filteredAffiliates.filter(a => !sentAffiliateIds.includes(a.id)).length}
+                                            checked={totalAvailableCount > 0 && selectedAffiliates.length === totalAvailableCount}
                                             onChange={handleSelectAll}
                                         />
                                         <label htmlFor="selectAll" className="font-medium text-slate-300">Select All</label>
@@ -1116,6 +1299,7 @@ const App: React.FC = () => {
                                         </li>
                                     );
                                })}
+                               {affiliatesToDisplay.length === 0 && <p className="text-center text-slate-400 p-4">No affiliates found with current filters.</p>}
                            </ul>
                         </div>
                         {/* Right Column: Message Composer */}
@@ -1180,11 +1364,12 @@ const App: React.FC = () => {
             setIsBroadcastTemplateModalOpen(false);
         }}
       />}
-      {isAddModalOpen && <AddAffiliateModal onClose={() => setIsAddModalOpen(false)} onAdd={handleAddAffiliate} />}
-      {isEditModalOpen && <EditAffiliateModal onClose={handleCloseEditModal} onSave={handleUpdateAffiliate} affiliate={affiliateToEdit} />}
+      {isAddModalOpen && <AddAffiliateModal onClose={() => setIsAddModalOpen(false)} onAdd={handleAddAffiliate} products={products} />}
+      {isEditModalOpen && <EditAffiliateModal onClose={handleCloseEditModal} onSave={handleUpdateAffiliate} affiliate={affiliateToEdit} products={products} />}
       {isAddSampleModalOpen && <AddSampleModal onClose={() => setIsAddSampleModalOpen(false)} onAdd={handleAddSample} affiliates={affiliators} products={products} />}
       {isEditSampleModalOpen && <EditSampleModal onClose={handleCloseEditSampleModal} onSave={handleUpdateSample} sample={sampleToEdit} affiliates={affiliators} products={products} />}
       {isAddProductModalOpen && <AddProductModal onClose={() => setIsAddProductModalOpen(false)} onAdd={handleAddProduct} />}
+      {isEditProductModalOpen && <EditProductModal onClose={handleCloseEditProductModal} onSave={handleUpdateProduct} product={productToEdit} />}
       <ConfirmationModal
         isOpen={isDeleteAffiliateModalOpen}
         onClose={handleCloseDeleteAffiliateModal}
@@ -1227,7 +1412,7 @@ const App: React.FC = () => {
       {/* Sidebar */}
       <aside className="w-64 bg-base-200/50 border-r border-base-300 flex flex-col">
         <div className="p-6">
-          <h1 className="text-2xl font-bold text-primary-content">Affiliate AI</h1>
+          <h1 className="text-2xl font-bold text-primary-content">Affiliate Manager</h1>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           {NAV_ITEMS.map(item => (

@@ -16,6 +16,7 @@ export interface Affiliator {
   whatsapp: string;
   tier: 'New' | 'Micro' | 'Mid' | 'Macro' | 'Mega';
   last_activity: string;
+  productIds: string[];
 }
 
 export interface Sample {
