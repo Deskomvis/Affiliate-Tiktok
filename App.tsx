@@ -2,6 +2,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Affiliator, Sample, Product, ContentItem, ContentItemType } from './types';
 import { NAV_ITEMS, INITIAL_AFFILIATORS, INITIAL_SAMPLES, INITIAL_PRODUCTS, BROADCAST_TEMPLATES, TemplateCategory, INITIAL_CONTENT_BANK_ITEMS } from './constants';
@@ -1698,7 +1700,7 @@ const BankKontenView = () => {
 
 
   return (
-    <div className="flex h-screen bg-base-100 text-base-content font-sans">
+    <div className="md:flex h-screen bg-base-100 text-base-content font-sans">
       {isBroadcastTemplateModalOpen && <BroadcastTemplateModal 
         onClose={() => setIsBroadcastTemplateModalOpen(false)}
         onSelect={(message) => {
@@ -1768,8 +1770,8 @@ const BankKontenView = () => {
         affiliate={selectedAffiliateForWhatsapp}
         initialMessage={whatsappInitialMessage}
       />
-      {/* Sidebar */}
-      <aside className="w-64 bg-base-200/50 border-r border-base-300 flex flex-col">
+      {/* Sidebar - Desktop */}
+      <aside className="w-64 bg-base-200/50 border-r border-base-300 flex-col hidden md:flex">
         <div className="p-6">
           <h1 className="text-2xl font-bold text-primary-content">Affiliate Manager</h1>
         </div>
@@ -1793,10 +1795,28 @@ const BankKontenView = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-8 pb-24 md:pb-8">
           {renderView()}
         </div>
       </main>
+
+      {/* Floating Menu - Mobile */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-base-200/80 backdrop-blur-sm border-t border-base-300 flex justify-around p-2 z-40">
+        {NAV_ITEMS.map(item => (
+            <button
+                key={item.id}
+                onClick={() => setView(item.id)}
+                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-colors w-16 ${
+                    view === item.id
+                    ? 'text-primary'
+                    : 'text-slate-400 hover:text-primary hover:bg-base-300/50'
+                }`}
+                aria-label={item.label}
+            >
+                {item.icon}
+            </button>
+        ))}
+      </nav>
     </div>
   );
 };
